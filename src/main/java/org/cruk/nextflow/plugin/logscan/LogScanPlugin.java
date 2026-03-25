@@ -1,0 +1,58 @@
+package org.cruk.nextflow.plugin.logscan;
+
+import nextflow.plugin.BasePlugin;
+import org.pf4j.PluginWrapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Main plugin class for nf-crukci-logscan.
+ * <p>
+ * This plugin scans task log files for configurable regex patterns
+ * and handles specific issues like memory limit violations.
+ * </p>
+ *
+ * @author Richard Bowers
+ * @since 1.0.0
+ */
+public class LogScanPlugin extends BasePlugin
+{
+    /**
+     * Logger instance for this class.
+     */
+    private static final Logger log = LoggerFactory.getLogger(LogScanPlugin.class);
+
+    /**
+     * Constructs a new LogScanPlugin.
+     *
+     * @param wrapper the plugin wrapper provided by PF4J
+     */
+    public LogScanPlugin(PluginWrapper wrapper)
+    {
+        super(wrapper);
+    }
+
+    /**
+     * Called when the plugin starts.
+     * <p>
+     * Logs a message indicating the plugin has been loaded.
+     * </p>
+     */
+    @Override
+    public void start()
+    {
+        log.info("nf-crukci-logscan plugin started");
+    }
+
+    /**
+     * Called when the plugin stops.
+     * <p>
+     * Logs a message indicating the plugin is stopping.
+     * </p>
+     */
+    @Override
+    public void stop()
+    {
+        log.info("nf-crukci-logscan plugin stopped");
+    }
+}
