@@ -20,7 +20,7 @@ public class LogScanPlugin extends BasePlugin
     /**
      * Logger instance for this class.
      */
-    private static final Logger log = LoggerFactory.getLogger(LogScanPlugin.class);
+    private static final Logger logger = LoggerFactory.getLogger(LogScanPlugin.class);
 
     /**
      * Constructs a new LogScanPlugin.
@@ -41,7 +41,7 @@ public class LogScanPlugin extends BasePlugin
     @Override
     public void start()
     {
-        log.info("nf-crukci-logscan plugin started");
+        logger.info("nf-crukci-logscan plugin started");
     }
 
     /**
@@ -53,6 +53,6 @@ public class LogScanPlugin extends BasePlugin
     @Override
     public void stop()
     {
-        log.info("nf-crukci-logscan plugin stopped");
+        logger.info("nf-crukci-logscan plugin stopped");
     }
 }

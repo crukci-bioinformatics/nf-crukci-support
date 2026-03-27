@@ -25,7 +25,7 @@ public class LogScanObserverFactory implements TraceObserverFactoryV2
     /**
      * Logger instance for this class.
      */
-    private static final Logger log = LoggerFactory.getLogger(LogScanObserverFactory.class);
+    private static final Logger logger = LoggerFactory.getLogger(LogScanObserverFactory.class);
 
     /**
      * Creates a collection of TraceObservers for the given session.
@@ -56,11 +56,11 @@ public class LogScanObserverFactory implements TraceObserverFactoryV2
         // Only create observer if enabled
         if (!config.isEnabled())
         {
-            log.debug("LogScan plugin is disabled");
+            logger.debug("LogScan plugin is disabled");
             return Collections.emptyList();
         }
 
-        log.info("Creating LogScan observer");
+        logger.info("Creating LogScan observer");
         return Collections.singletonList(new LogScanObserver(session, config));
     }
 }

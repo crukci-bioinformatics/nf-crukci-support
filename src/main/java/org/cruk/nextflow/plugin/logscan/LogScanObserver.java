@@ -29,7 +29,7 @@ public class LogScanObserver implements TraceObserverV2
     /**
      * Logger instance for this class.
      */
-    private static final Logger log = LoggerFactory.getLogger(LogScanObserver.class);
+    private static final Logger logger = LoggerFactory.getLogger(LogScanObserver.class);
 
     /**
      * The Nextflow session.
@@ -72,7 +72,7 @@ public class LogScanObserver implements TraceObserverV2
     {
         if (config.isVerbose())
         {
-            log.info("LogScan observer created");
+            logger.info("LogScan observer created");
         }
     }
 
@@ -84,7 +84,7 @@ public class LogScanObserver implements TraceObserverV2
     {
         if (config.isVerbose())
         {
-            log.info("LogScan observer - workflow begun");
+            logger.info("LogScan observer - workflow begun");
         }
     }
 
@@ -99,7 +99,7 @@ public class LogScanObserver implements TraceObserverV2
     {
         if (config.isVerbose())
         {
-            log.info("LogScan observer completed");
+            logger.info("LogScan observer completed");
         }
     }
 
@@ -224,7 +224,7 @@ public class LogScanObserver implements TraceObserverV2
         {
             if (config.isVerbose())
             {
-                log.debug("No workdir found in trace record");
+                logger.debug("No workdir found in trace record");
             }
             return;
         }
@@ -252,14 +252,14 @@ public class LogScanObserver implements TraceObserverV2
                 Object nameObj = trace.get("name");
                 String taskName = nameObj != null ? nameObj.toString() : "unknown";
                 
-                log.warn("Task '{}' - Pattern '{}' found at line {}: {}",
+                logger.warn("Task '{}' - Pattern '{}' found at line {}: {}",
                     taskName, match.getPattern().getName(),
                     match.getLineNumber(), match.getMatchedText());
 
                 // If this pattern should trigger a retry, we need to signal it
                 if (match.getPattern().shouldTriggerRetry())
                 {
-                    log.warn("Task '{}' exceeded memory limit - triggering retry", taskName);
+                    logger.warn("Task '{}' exceeded memory limit - triggering retry", taskName);
                     // Note: In Nextflow, retries are typically handled by the error strategy
                     // configuration. We log the issue but cannot directly trigger a retry
                     // from here. The user should configure errorStrategy = 'retry' in their
@@ -269,7 +269,7 @@ public class LogScanObserver implements TraceObserverV2
         }
         catch (Exception e)
         {
-            log.error("Error scanning log file: {}", logFile, e);
+            logger.error("Error scanning log file: {}", logFile, e);
         }
     }
 

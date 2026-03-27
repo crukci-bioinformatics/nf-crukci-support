@@ -23,7 +23,8 @@ public class LogScanConfig
     /**
      * Logger instance for this class.
      */
-    private static final Logger log = LoggerFactory.getLogger(LogScanConfig.class);
+    @SuppressWarnings("unused")
+    private static final Logger logger = LoggerFactory.getLogger(LogScanConfig.class);
 
     /**
      * Whether log scanning is enabled.

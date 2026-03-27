@@ -26,7 +26,7 @@ public class LogScanner
     /**
      * Logger instance for this class.
      */
-    private static final Logger log = LoggerFactory.getLogger(LogScanner.class);
+    private static final Logger logger = LoggerFactory.getLogger(LogScanner.class);
 
     /**
      * Configuration for this scanner.
@@ -123,14 +123,14 @@ public class LogScanner
         {
             if (config.isVerbose())
             {
-                log.debug("Log file does not exist: {}", logFile);
+                logger.debug("Log file does not exist: {}", logFile);
             }
             return matches;
         }
 
         if (config.isVerbose())
         {
-            log.debug("Scanning log file: {}", logFile);
+            logger.debug("Scanning log file: {}", logFile);
         }
 
         int lineNumber = 0;
@@ -148,7 +148,7 @@ public class LogScanner
                 {
                     if (config.isVerbose())
                     {
-                        log.debug("Reached max lines to scan: {}", maxLines);
+                        logger.debug("Reached max lines to scan: {}", maxLines);
                     }
                     break;
                 }
@@ -164,7 +164,7 @@ public class LogScanner
 
                         if (config.isVerbose())
                         {
-                            log.debug("Pattern '{}' matched at line {}: {}",
+                            logger.debug("Pattern '{}' matched at line {}: {}",
                                 scanPattern.getName(), lineNumber, matchedText);
                         }
                     }
