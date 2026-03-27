@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.cruk.nextflow</groupId>
-    <artifactId>crukci-logscan</artifactId>
+    <artifactId>nf-crukci-logscan</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
