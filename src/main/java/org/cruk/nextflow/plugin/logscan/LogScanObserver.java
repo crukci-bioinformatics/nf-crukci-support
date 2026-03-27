@@ -196,9 +196,9 @@ public class LogScanObserver implements TraceObserverV2
         // Check if we should scan based on task status
         Object exitObj = trace.get("exit");
         Integer exitStatus = null;
-        if (exitObj instanceof Number)
+        if (exitObj instanceof Number exitCode)
         {
-            exitStatus = ((Number) exitObj).intValue();
+            exitStatus = exitCode.intValue();
         }
 
         boolean success = (exitStatus != null && exitStatus == 0);
@@ -251,19 +251,25 @@ public class LogScanObserver implements TraceObserverV2
             {
                 Object nameObj = trace.get("name");
                 String taskName = nameObj != null ? nameObj.toString() : "unknown";
-                
+
                 logger.warn("Task '{}' - Pattern '{}' found at line {}: {}",
                     taskName, match.getPattern().getName(),
                     match.getLineNumber(), match.getMatchedText());
 
-                // If this pattern should trigger a retry, we need to signal it
+                // If this pattern has an exit code, update the trace record
+                Integer patternExitCode = match.getPattern().getExitCode();
+                if (patternExitCode != null)
+                {
+                    logger.warn("Task '{}' - Setting exit code to {} due to pattern match", 
+                        taskName, patternExitCode);
+                    trace.put("exit", patternExitCode);
+                }
+
+                // If this pattern should trigger a retry, log it
                 if (match.getPattern().shouldTriggerRetry())
                 {
-                    logger.warn("Task '{}' exceeded memory limit - triggering retry", taskName);
-                    // Note: In Nextflow, retries are typically handled by the error strategy
-                    // configuration. We log the issue but cannot directly trigger a retry
-                    // from here. The user should configure errorStrategy = 'retry' in their
-                    // process definition.
+                    logger.warn("Task '{}' - Pattern should trigger retry (configure errorStrategy in process)", 
+                        taskName);
                 }
             }
         }

@@ -10,7 +10,8 @@ This plugin monitors Nextflow task completions and scans their `.command.log` fi
 
 - Scans task log files on completion (success and/or failure)
 - Configurable regex patterns with case-sensitive/insensitive matching
-- Automatic detection of "Exceeded job memory limit" patterns
+- **Exit code override**: Set custom exit codes when patterns match to trigger Nextflow errorStrategy
+- Automatic detection of "Exceeded job memory limit" patterns with exit code 137
 - Support for triggering task retries on specific patterns
 - Configurable maximum lines to scan
 - Verbose logging mode for debugging
@@ -53,13 +54,22 @@ logScan {
             pattern: 'ERROR',
             name: 'Error Pattern',
             caseSensitive: true,
-            triggerRetry: false
+            triggerRetry: false,
+            exitCode: null              // Optional: override exit code
         ],
         [
             pattern: 'warning',
             name: 'Warning Pattern',
             caseSensitive: false,
-            triggerRetry: false
+            triggerRetry: false,
+            exitCode: null
+        ],
+        [
+            pattern: 'CUDA out of memory',
+            name: 'GPU Memory Error',
+            caseSensitive: true,
+            triggerRetry: true,
+            exitCode: 140               // Custom exit code for GPU memory
         ]
     ]
 }
@@ -67,13 +77,22 @@ logScan {
 
 ## Usage
 
-The plugin automatically scans task log files when enabled. To enable task retries when memory limits are exceeded, configure your process with an error strategy:
+The plugin automatically scans task log files when enabled. When a pattern with an `exitCode` is matched, the plugin updates the task's exit status, which can trigger Nextflow's error handling strategies.
+
+### Exit Code Override
+
+When a pattern is matched, the plugin can set a custom exit code for the task. This is particularly useful for triggering specific error strategies:
+
+- **Exit code 137**: Commonly used for memory limit violations (automatically set for patterns containing "memory limit")
+- **Custom exit codes**: Set any exit code to trigger different error handling behaviors
+
+Configure your process with an error strategy to handle these exit codes:
 
 ```groovy
 process myProcess {
-    errorStrategy 'retry'
+    errorStrategy { task.exitStatus == 137 ? 'retry' : 'terminate' }
     maxRetries 3
-    memory { 4.GB * task.attempt }
+    memory { task.exitStatus == 137 ? 4.GB * task.attempt : 4.GB }
     
     script:
     """
@@ -82,7 +101,7 @@ process myProcess {
 }
 ```
 
-When the plugin detects "Exceeded job memory limit" in the log file, it will log a warning. Combined with the `errorStrategy 'retry'` configuration and dynamic memory allocation, tasks will automatically retry with more memory.
+When the plugin detects a pattern with `exitCode: 137` in the log file, it sets the task's exit status to 137, triggering the retry logic with increased memory.
 
 ## Pattern Configuration
 
@@ -102,10 +121,16 @@ patterns = [
         pattern: 'regex_pattern',      // Required: regex pattern to match
         name: 'Pattern Name',          // Optional: display name
         caseSensitive: true,           // Optional: default is true
-        triggerRetry: false            // Optional: mark as retry trigger
+        triggerRetry: false,           // Optional: mark as retry trigger
+        exitCode: null                 // Optional: exit code to set when matched
     ]
 ]
 ```
+
+**Exit code behavior:**
+- Patterns containing "memory limit" automatically get `exitCode: 137` (if not explicitly set)
+- Set `exitCode: null` to not override the task's exit status
+- Any integer exit code can be specified (0-255 recommended)
 
 ## Default Behavior
 
@@ -113,6 +138,7 @@ If no patterns are configured, the plugin uses a default pattern:
 - Pattern: `Exceeded job memory limit`
 - Name: `Memory Limit Exceeded`
 - Triggers retry detection
+- Exit code: `137` (standard exit code for memory limit violations)
 
 ## Requirements
 

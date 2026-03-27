@@ -77,17 +77,25 @@ public class LogScanConfig
         private final boolean triggerRetry;
 
         /**
+         * The exit code to set when this pattern is matched.
+         * A value of null means no exit code override.
+         */
+        private final Integer exitCode;
+
+        /**
          * Constructs a new ScanPattern.
          *
          * @param pattern the compiled regex pattern
          * @param name the name/description of this pattern
          * @param triggerRetry whether this pattern should trigger a retry
+         * @param exitCode the exit code to set when matched (null = no override)
          */
-        public ScanPattern(Pattern pattern, String name, boolean triggerRetry)
+        public ScanPattern(Pattern pattern, String name, boolean triggerRetry, Integer exitCode)
         {
             this.pattern = pattern;
             this.name = name;
             this.triggerRetry = triggerRetry;
+            this.exitCode = exitCode;
         }
 
         /**
@@ -118,6 +126,16 @@ public class LogScanConfig
         public boolean shouldTriggerRetry()
         {
             return triggerRetry;
+        }
+
+        /**
+         * Gets the exit code to set when this pattern is matched.
+         *
+         * @return the exit code, or null if no exit code override is configured
+         */
+        public Integer getExitCode()
+        {
+            return exitCode;
         }
     }
 
@@ -153,10 +171,12 @@ public class LogScanConfig
                 {
                     // Simple string pattern
                     boolean isMemoryPattern = patternStr.contains("memory limit");
+                    Integer exitCode = isMemoryPattern ? 137 : null;
                     patterns.add(new ScanPattern(
                         Pattern.compile(patternStr),
                         patternStr,
-                        isMemoryPattern
+                        isMemoryPattern,
+                        exitCode
                     ));
                 }
                 else if (patternObj instanceof Map)
@@ -166,8 +186,9 @@ public class LogScanConfig
                     String patternStr = (String) patternMap.get("pattern");
                     String name = (String) patternMap.getOrDefault("name", patternStr);
                     boolean caseSensitive = getBooleanValue(patternMap, "caseSensitive", true);
-                    boolean triggerRetry = getBooleanValue(patternMap, "triggerRetry",
-                        patternStr != null && patternStr.contains("memory limit"));
+                    boolean isMemoryPattern = patternStr != null && patternStr.contains("memory limit");
+                    boolean triggerRetry = getBooleanValue(patternMap, "triggerRetry", isMemoryPattern);
+                    Integer exitCode = getIntegerValue(patternMap, "exitCode", isMemoryPattern ? 137 : null);
 
                     if (patternStr != null)
                     {
@@ -175,7 +196,8 @@ public class LogScanConfig
                         patterns.add(new ScanPattern(
                             Pattern.compile(patternStr, flags),
                             name,
-                            triggerRetry
+                            triggerRetry,
+                            exitCode
                         ));
                     }
                 }
@@ -188,13 +210,14 @@ public class LogScanConfig
             patterns.add(new ScanPattern(
                 Pattern.compile("Exceeded job memory limit"),
                 "Memory Limit Exceeded",
-                true
+                true,
+                137
             ));
         }
 
         if (verbose)
         {
-            log.info("LogScan config: enabled={}, scanOnSuccess={}, scanOnFailure={}, patterns={}",
+            logger.info("LogScan config: enabled={}, scanOnSuccess={}, scanOnFailure={}, patterns={}",
                 enabled, scanOnSuccess, scanOnFailure, patterns.size());
         }
     }
@@ -226,6 +249,24 @@ public class LogScanConfig
      * @return the integer value
      */
     private int getIntValue(Map<String, Object> map, String key, int defaultValue)
+    {
+        Object value = map.get(key);
+        if (value instanceof Number num)
+        {
+            return num.intValue();
+        }
+        return defaultValue;
+    }
+
+    /**
+     * Gets an Integer value from a map with a default (nullable).
+     *
+     * @param map the map to read from
+     * @param key the key to look up
+     * @param defaultValue the default value if not found
+     * @return the Integer value, or null
+     */
+    private Integer getIntegerValue(Map<String, Object> map, String key, Integer defaultValue)
     {
         Object value = map.get(key);
         if (value instanceof Number)
