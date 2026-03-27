@@ -5,8 +5,8 @@ import java.util.Collections;
 import java.util.Map;
 
 import nextflow.Session;
-import nextflow.trace.TraceObserver;
-import nextflow.trace.TraceObserverFactory;
+import nextflow.trace.TraceObserverV2;
+import nextflow.trace.TraceObserverFactoryV2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,8 +20,7 @@ import org.slf4j.LoggerFactory;
  * @author Richard Bowers
  * @since 1.0.0
  */
-@SuppressWarnings("deprecation")
-public class LogScanObserverFactory implements TraceObserverFactory
+public class LogScanObserverFactory implements TraceObserverFactoryV2
 {
     /**
      * Logger instance for this class.
@@ -40,7 +39,7 @@ public class LogScanObserverFactory implements TraceObserverFactory
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Collection<TraceObserver> create(Session session)
+    public Collection<TraceObserverV2> create(Session session)
     {
         // Read configuration from session
         Map<String, Object> configMap = null;

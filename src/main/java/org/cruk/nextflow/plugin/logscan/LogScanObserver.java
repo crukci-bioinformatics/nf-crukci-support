@@ -5,25 +5,26 @@ import java.nio.file.Paths;
 import java.util.List;
 
 import nextflow.Session;
-import nextflow.processor.TaskHandler;
 import nextflow.processor.TaskProcessor;
-import nextflow.trace.TraceObserver;
+import nextflow.trace.TraceObserverV2;
 import nextflow.trace.TraceRecord;
+import nextflow.trace.event.TaskEvent;
+import nextflow.trace.event.FilePublishEvent;
+import nextflow.trace.event.WorkflowOutputEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Observer that monitors task completions and scans their log files.
  * <p>
- * Implements TraceObserver to hook into Nextflow's task lifecycle
+ * Implements TraceObserverV2 to hook into Nextflow's task lifecycle
  * and perform log scanning when tasks complete.
  * </p>
  *
  * @author Richard Bowers
  * @since 1.0.0
  */
-@SuppressWarnings("deprecation")
-public class LogScanObserver implements TraceObserver
+public class LogScanObserver implements TraceObserverV2
 {
     /**
      * Logger instance for this class.
@@ -105,11 +106,10 @@ public class LogScanObserver implements TraceObserver
     /**
      * Called when a workflow encounters an error.
      *
-     * @param handler the task handler
-     * @param trace the trace record
+     * @param event the task event
      */
     @Override
-    public void onFlowError(TaskHandler handler, TraceRecord trace)
+    public void onFlowError(TaskEvent event)
     {
         // Not needed
     }
@@ -139,11 +139,10 @@ public class LogScanObserver implements TraceObserver
     /**
      * Called when a task is pending.
      *
-     * @param handler the task handler
-     * @param trace the trace record
+     * @param event the task event
      */
     @Override
-    public void onProcessPending(TaskHandler handler, TraceRecord trace)
+    public void onTaskPending(TaskEvent event)
     {
         // Not needed
     }
@@ -151,11 +150,10 @@ public class LogScanObserver implements TraceObserver
     /**
      * Called when a task is submitted.
      *
-     * @param handler the task handler
-     * @param trace the trace record
+     * @param event the task event
      */
     @Override
-    public void onProcessSubmit(TaskHandler handler, TraceRecord trace)
+    public void onTaskSubmit(TaskEvent event)
     {
         // Not needed
     }
@@ -163,11 +161,10 @@ public class LogScanObserver implements TraceObserver
     /**
      * Called when a task starts.
      *
-     * @param handler the task handler
-     * @param trace the trace record
+     * @param event the task event
      */
     @Override
-    public void onProcessStart(TaskHandler handler, TraceRecord trace)
+    public void onTaskStart(TaskEvent event)
     {
         // Not needed
     }
@@ -180,13 +177,18 @@ public class LogScanObserver implements TraceObserver
      * triggers a retry by throwing an exception.
      * </p>
      *
-     * @param handler the task handler
-     * @param trace the trace record for the completed task
+     * @param event the task event for the completed task
      */
     @Override
-    public void onProcessComplete(TaskHandler handler, TraceRecord trace)
+    public void onTaskComplete(TaskEvent event)
     {
         if (!config.isEnabled())
+        {
+            return;
+        }
+
+        TraceRecord trace = event.getTrace();
+        if (trace == null)
         {
             return;
         }
@@ -277,48 +279,35 @@ public class LogScanObserver implements TraceObserver
      * This implementation optionally scans cached tasks based on configuration.
      * </p>
      *
-     * @param handler the task handler
-     * @param trace the trace record for the cached task
+     * @param event the task event for the cached task
      */
     @Override
-    public void onProcessCached(TaskHandler handler, TraceRecord trace)
+    public void onTaskCached(TaskEvent event)
     {
         if (config.isScanOnSuccess())
         {
-            onProcessComplete(handler, trace);
+            onTaskComplete(event);
         }
     }
 
     /**
-     * Called when a workflow is published.
+     * Called when a workflow output is published.
      *
-     * @param data the workflow data
+     * @param event the workflow output event
      */
     @Override
-    public void onWorkflowPublish(Object data)
+    public void onWorkflowOutput(WorkflowOutputEvent event)
     {
         // Not needed
     }
 
     /**
-     * Called when a file is published (single parameter version).
+     * Called when a file is published.
      *
-     * @param destination the destination path
+     * @param event the file publish event
      */
     @Override
-    public void onFilePublish(Path destination)
-    {
-        // Not needed
-    }
-
-    /**
-     * Called when a file is published (two parameter version).
-     *
-     * @param destination the destination path
-     * @param source the source path
-     */
-    @Override
-    public void onFilePublish(Path destination, Path source)
+    public void onFilePublish(FilePublishEvent event)
     {
         // Not needed
     }
