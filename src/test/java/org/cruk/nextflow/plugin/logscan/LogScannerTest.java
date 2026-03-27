@@ -159,6 +159,6 @@ class LogScannerTest
 
         assertEquals(1, matches.size());
         assertEquals(3, matches.get(0).getLineNumber());
-        assertTrue(matches.get(0).getPattern().shouldTriggerRetry());
+        assertEquals(137, matches.get(0).getPattern().getExitCode());
     }
 }

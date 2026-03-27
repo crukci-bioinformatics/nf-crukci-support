@@ -264,13 +264,6 @@ public class LogScanObserver implements TraceObserverV2
                         taskName, patternExitCode);
                     trace.put("exit", patternExitCode);
                 }
-
-                // If this pattern should trigger a retry, log it
-                if (match.getPattern().shouldTriggerRetry())
-                {
-                    logger.warn("Task '{}' - Pattern should trigger retry (configure errorStrategy in process)", 
-                        taskName);
-                }
             }
         }
         catch (Exception e)

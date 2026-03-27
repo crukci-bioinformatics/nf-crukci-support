@@ -72,11 +72,6 @@ public class LogScanConfig
         private final String name;
 
         /**
-         * Whether the pattern should trigger a retry.
-         */
-        private final boolean triggerRetry;
-
-        /**
          * The exit code to set when this pattern is matched.
          * A value of null means no exit code override.
          */
@@ -87,14 +82,12 @@ public class LogScanConfig
          *
          * @param pattern the compiled regex pattern
          * @param name the name/description of this pattern
-         * @param triggerRetry whether this pattern should trigger a retry
          * @param exitCode the exit code to set when matched (null = no override)
          */
-        public ScanPattern(Pattern pattern, String name, boolean triggerRetry, Integer exitCode)
+        public ScanPattern(Pattern pattern, String name, Integer exitCode)
         {
             this.pattern = pattern;
             this.name = name;
-            this.triggerRetry = triggerRetry;
             this.exitCode = exitCode;
         }
 
@@ -116,16 +109,6 @@ public class LogScanConfig
         public String getName()
         {
             return name;
-        }
-
-        /**
-         * Checks if this pattern should trigger a retry.
-         *
-         * @return true if a retry should be triggered
-         */
-        public boolean shouldTriggerRetry()
-        {
-            return triggerRetry;
         }
 
         /**
@@ -175,7 +158,6 @@ public class LogScanConfig
                     patterns.add(new ScanPattern(
                         Pattern.compile(patternStr),
                         patternStr,
-                        isMemoryPattern,
                         exitCode
                     ));
                 }
@@ -187,7 +169,6 @@ public class LogScanConfig
                     String name = (String) patternMap.getOrDefault("name", patternStr);
                     boolean caseSensitive = getBooleanValue(patternMap, "caseSensitive", true);
                     boolean isMemoryPattern = patternStr != null && patternStr.contains("memory limit");
-                    boolean triggerRetry = getBooleanValue(patternMap, "triggerRetry", isMemoryPattern);
                     Integer exitCode = getIntegerValue(patternMap, "exitCode", isMemoryPattern ? 137 : null);
 
                     if (patternStr != null)
@@ -196,7 +177,6 @@ public class LogScanConfig
                         patterns.add(new ScanPattern(
                             Pattern.compile(patternStr, flags),
                             name,
-                            triggerRetry,
                             exitCode
                         ));
                     }
@@ -210,7 +190,6 @@ public class LogScanConfig
             patterns.add(new ScanPattern(
                 Pattern.compile("Exceeded job memory limit"),
                 "Memory Limit Exceeded",
-                true,
                 137
             ));
         }

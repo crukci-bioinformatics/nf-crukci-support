@@ -32,7 +32,7 @@ class LogScanConfigTest
         // Should have default memory limit pattern
         assertEquals(1, config.getPatterns().size());
         assertEquals("Memory Limit Exceeded", config.getPatterns().get(0).getName());
-        assertTrue(config.getPatterns().get(0).shouldTriggerRetry());
+        assertEquals(137, config.getPatterns().get(0).getExitCode());
     }
 
     /**
@@ -73,8 +73,8 @@ class LogScanConfigTest
         assertEquals(2, config.getPatterns().size());
         assertEquals("ERROR", config.getPatterns().get(0).getName());
         assertEquals("WARNING", config.getPatterns().get(1).getName());
-        assertFalse(config.getPatterns().get(0).shouldTriggerRetry());
-        assertFalse(config.getPatterns().get(1).shouldTriggerRetry());
+        assertNull(config.getPatterns().get(0).getExitCode());
+        assertNull(config.getPatterns().get(1).getExitCode());
     }
 
     /**
@@ -87,7 +87,7 @@ class LogScanConfigTest
             "patterns", List.of(
                 Map.of("pattern", "ERROR", "name", "Error Pattern", "caseSensitive", true),
                 Map.of("pattern", "warning", "name", "Warning Pattern", "caseSensitive", false),
-                Map.of("pattern", "memory limit", "name", "Memory", "triggerRetry", true)
+                Map.of("pattern", "memory limit", "name", "Memory", "exitCode", 137)
             )
         );
 
@@ -97,9 +97,9 @@ class LogScanConfigTest
         assertEquals("Error Pattern", config.getPatterns().get(0).getName());
         assertEquals("Warning Pattern", config.getPatterns().get(1).getName());
         assertEquals("Memory", config.getPatterns().get(2).getName());
-        assertFalse(config.getPatterns().get(0).shouldTriggerRetry());
-        assertFalse(config.getPatterns().get(1).shouldTriggerRetry());
-        assertTrue(config.getPatterns().get(2).shouldTriggerRetry());
+        assertNull(config.getPatterns().get(0).getExitCode());
+        assertNull(config.getPatterns().get(1).getExitCode());
+        assertEquals(137, config.getPatterns().get(2).getExitCode());
     }
 
     /**
@@ -115,7 +115,7 @@ class LogScanConfigTest
         LogScanConfig config = new LogScanConfig(configMap);
 
         assertEquals(2, config.getPatterns().size());
-        assertTrue(config.getPatterns().get(0).shouldTriggerRetry());
-        assertFalse(config.getPatterns().get(1).shouldTriggerRetry());
+        assertEquals(137, config.getPatterns().get(0).getExitCode());
+        assertNull(config.getPatterns().get(1).getExitCode());
     }
 }
