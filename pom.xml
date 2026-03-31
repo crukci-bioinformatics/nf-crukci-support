@@ -6,18 +6,18 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.cruk.nextflow</groupId>
-    <artifactId>nf-crukci-logscan</artifactId>
+    <artifactId>nf-crukci-support</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>nf-crukci-logscan</name>
+    <name>nf-crukci-support</name>
     <description>
         Nextflow plugin to scan task log files for patterns and handle memory limit issues.
     </description>
 
     <inceptionYear>2026</inceptionYear>
 
-    <url>https://internal-bioinformatics.cruk.cam.ac.uk/docs/nf-crukci-logscan</url>
+    <url>https://internal-bioinformatics.cruk.cam.ac.uk/docs/nf-crukci-support</url>
 
     <organization>
         <name>Cancer Research UK Cambridge Institute</name>
@@ -127,7 +127,7 @@
                             </manifest>
                             <manifestEntries>
                                 <Plugin-Class>org.cruk.nextflow.plugin.logscan.LogScanPlugin</Plugin-Class>
-                                <Plugin-Id>nf-crukci-logscan</Plugin-Id>
+                                <Plugin-Id>nf-crukci-support</Plugin-Id>
                                 <Plugin-Version>${project.version}</Plugin-Version>
                                 <Plugin-Requires><![CDATA[>=25.04.0]]></Plugin-Requires>
                                 <Plugin-Provider>Cancer Research UK Cambridge Institute</Plugin-Provider>

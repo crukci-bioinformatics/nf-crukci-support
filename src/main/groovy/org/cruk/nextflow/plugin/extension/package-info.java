@@ -4,7 +4,7 @@
  * <p>This package contains CRUK CI utility extensions that can be included
  * in Nextflow pipelines using:</p>
  * <pre>
- * include { javaMemMB; javaMemoryOptions; sizeOf; makeCollection; safeName; logException } from 'plugin/nf-crukci-logscan'
+ * include { javaMemMB; javaMemoryOptions; sizeOf; makeCollection; safeName; logException } from 'plugin/nf-crukci-support'
  * </pre>
  *
  * @since 1.0.0

@@ -1,6 +1,6 @@
-# nf-crukci-logscan Example Pipeline
+# nf-crukci-support Example Pipeline
 
-This directory contains example Nextflow pipelines demonstrating the features of the nf-crukci-logscan plugin.
+This directory contains example Nextflow pipelines demonstrating the features of the nf-crukci-support plugin.
 
 ## Example Files
 
@@ -38,8 +38,8 @@ From the repository root:
 ```bash
 cd nf-crukci-support
 mvn clean package
-mkdir -p ~/.nextflow/plugins/nf-crukci-logscan-1.0.0-SNAPSHOT
-cp target/nf-crukci-logscan-1.0.0-SNAPSHOT.jar ~/.nextflow/plugins/nf-crukci-logscan-1.0.0-SNAPSHOT/
+mkdir -p ~/.nextflow/plugins/nf-crukci-support-1.0.0-SNAPSHOT
+cp target/nf-crukci-support-1.0.0-SNAPSHOT.jar ~/.nextflow/plugins/nf-crukci-support-1.0.0-SNAPSHOT/
 ```
 
 ### 2. Run the Log Scanning Example
@@ -62,10 +62,10 @@ nextflow run extension-example.nf -c extension-example.config
 
 ```groovy
 // Include all functions
-include { javaMemMB; javaMemoryOptions; sizeOf; makeCollection; safeName; logException } from 'plugin/nf-crukci-logscan'
+include { javaMemMB; javaMemoryOptions; sizeOf; makeCollection; safeName; logException } from 'plugin/nf-crukci-support'
 
 // Or include only what you need
-include { javaMemoryOptions; safeName } from 'plugin/nf-crukci-logscan'
+include { javaMemoryOptions; safeName } from 'plugin/nf-crukci-support'
 ```
 
 ### Example Usage
@@ -296,7 +296,7 @@ Handles InvocationTargetException specially to log the real cause.
 If the plugin doesn't seem to be working:
 
 1. Check that the plugin JAR is in the correct location
-2. Verify the plugin ID in your config matches: `nf-crukci-logscan@1.0.0-SNAPSHOT`
+2. Verify the plugin ID in your config matches: `nf-crukci-support@1.0.0-SNAPSHOT`
 3. Enable verbose logging (`verbose = true`) to see detailed scan information
 4. Check that patterns are valid regex expressions
 5. Ensure you're running Nextflow 25.04.0 or newer

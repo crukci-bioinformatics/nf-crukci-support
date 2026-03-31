@@ -6,7 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Main plugin class for nf-crukci-logscan.
+ * Main plugin class for nf-crukci-support.
  * <p>
  * This plugin scans task log files for configurable regex patterns
  * and handles specific issues like memory limit violations.
@@ -41,7 +41,7 @@ public class LogScanPlugin extends BasePlugin
     @Override
     public void start()
     {
-        logger.info("nf-crukci-logscan plugin started");
+        logger.info("nf-crukci-support plugin started");
     }
 
     /**
@@ -53,6 +53,6 @@ public class LogScanPlugin extends BasePlugin
     @Override
     public void stop()
     {
-        logger.info("nf-crukci-logscan plugin stopped");
+        logger.info("nf-crukci-support plugin stopped");
     }
 }

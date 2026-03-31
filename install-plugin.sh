@@ -1,11 +1,11 @@
 #!/bin/bash
 #
-# Install the nf-crukci-logscan plugin for local testing
+# Install the nf-crukci-support plugin for local testing
 #
 
 set -e
 
-PLUGIN_ID="nf-crukci-logscan"
+PLUGIN_ID="nf-crukci-support"
 PLUGIN_VERSION="1.0.0-SNAPSHOT"
 PLUGIN_DIR="$HOME/.nextflow/plugins/${PLUGIN_ID}-${PLUGIN_VERSION}"
 JAR_FILE="target/${PLUGIN_ID}-${PLUGIN_VERSION}.jar"

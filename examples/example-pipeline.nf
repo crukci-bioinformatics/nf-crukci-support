@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 /*
- * Example pipeline demonstrating the nf-crukci-logscan plugin
+ * Example pipeline demonstrating the nf-crukci-support plugin
  *
  * This pipeline shows how the plugin:
  * - Scans task log files for configured patterns
@@ -11,7 +11,7 @@
 
 println """
 ================================================================================
-nf-crukci-logscan Example Pipeline
+nf-crukci-support Example Pipeline
 ================================================================================
 This pipeline demonstrates log scanning and exit code override functionality.
 Watch for log scan warnings in the output.

@@ -2,7 +2,7 @@
 
 ## Problem Summary
 
-The nf-logscan plugin was experiencing two critical issues:
+The nf-crukci-support plugin was experiencing two critical issues:
 
 1. **Timing Problem**: The plugin ran too late in the Nextflow task lifecycle
 2. **Exit Code Ignored**: Modifications to exit codes had no effect on error strategy and retry logic
@@ -151,8 +151,8 @@ To test the fix:
    ```bash
    cd /home/bowers01/work/nextflow/nf-crukci-support4/nf-crukci-support
    mvn clean package
-   mkdir -p ~/.nextflow/plugins/nf-logscan-1.0.0-SNAPSHOT
-   cp target/nf-crukci-logscan-1.0.0-SNAPSHOT.jar ~/.nextflow/plugins/nf-logscan-1.0.0-SNAPSHOT/
+   mkdir -p ~/.nextflow/plugins/nf-crukci-support-1.0.0-SNAPSHOT
+   cp target/nf-crukci-support-1.0.0-SNAPSHOT.jar ~/.nextflow/plugins/nf-crukci-support-1.0.0-SNAPSHOT/
    ```
 
 2. **Run test pipeline:**

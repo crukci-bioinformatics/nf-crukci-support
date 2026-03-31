@@ -1,4 +1,4 @@
-# nf-crukci-logscan
+# nf-crukci-support
 
 A Nextflow plugin that scans task log files for configurable regex patterns and handles memory limit issues.
 
@@ -27,8 +27,8 @@ mvn clean package
 
 2. Install to Nextflow plugins directory:
 ```bash
-mkdir -p ~/.nextflow/plugins/nf-crukci-logscan-1.0.0-SNAPSHOT
-cp target/nf-crukci-logscan-1.0.0-SNAPSHOT.jar ~/.nextflow/plugins/nf-crukci-logscan-1.0.0-SNAPSHOT/
+mkdir -p ~/.nextflow/plugins/nf-crukci-support-1.0.0-SNAPSHOT
+cp target/nf-crukci-support-1.0.0-SNAPSHOT.jar ~/.nextflow/plugins/nf-crukci-support-1.0.0-SNAPSHOT/
 ```
 
 ## Configuration
@@ -37,7 +37,7 @@ Add the plugin to your `nextflow.config`:
 
 ```groovy
 plugins {
-    id 'nf-crukci-logscan@1.0.0-SNAPSHOT'
+    id 'nf-crukci-support@1.0.0-SNAPSHOT'
 }
 
 logScan {

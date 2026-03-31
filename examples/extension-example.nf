@@ -5,7 +5,7 @@
  */
 
 // Include extension functions
-include { javaMemMB; javaMemoryOptions; sizeOf; makeCollection; safeName; logException } from 'plugin/nf-crukci-logscan'
+include { javaMemMB; javaMemoryOptions; sizeOf; makeCollection; safeName; logException } from 'plugin/nf-crukci-support'
 
 process testJavaMemory {
     memory '1 GB'

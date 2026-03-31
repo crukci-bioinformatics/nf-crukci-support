@@ -2,7 +2,7 @@
 
 ## Problem Summary
 
-The nf-logscan plugin experiences a ~7.5 minute delay before being triggered when SLURM kills a task due to memory limits. This is **not a plugin issue** but rather a fundamental limitation of how Nextflow detects externally-killed SLURM jobs.
+The nf-crukci-support plugin experiences a ~7.5 minute delay before being triggered when SLURM kills a task due to memory limits. This is **not a plugin issue** but rather a fundamental limitation of how Nextflow detects externally-killed SLURM jobs.
 
 ## Timeline from Test Run
 
