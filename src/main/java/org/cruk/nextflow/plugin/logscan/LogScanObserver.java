@@ -47,6 +47,11 @@ public class LogScanObserver implements TraceObserverV2
     private final LogScanner scanner;
 
     /**
+     * The task monitor for proactive exit code creation.
+     */
+    private final TaskMonitor taskMonitor;
+
+    /**
      * Constructs a new LogScanObserver.
      *
      * @param session the Nextflow session
@@ -57,6 +62,7 @@ public class LogScanObserver implements TraceObserverV2
         this.session = session;
         this.config = config;
         this.scanner = new LogScanner(config);
+        this.taskMonitor = new TaskMonitor(config);
     }
 
     /**
@@ -78,10 +84,15 @@ public class LogScanObserver implements TraceObserverV2
 
     /**
      * Called when the workflow begins execution.
+     * <p>
+     * Starts the task monitor thread for proactive exit code creation.
+     * </p>
      */
     @Override
     public void onFlowBegin()
     {
+        taskMonitor.start();
+
         if (config.isVerbose())
         {
             logger.info("LogScan observer - workflow begun");
@@ -91,12 +102,14 @@ public class LogScanObserver implements TraceObserverV2
     /**
      * Called when the workflow completes.
      * <p>
-     * Logs a message if verbose logging is enabled.
+     * Stops the task monitor thread and logs a message if verbose logging is enabled.
      * </p>
      */
     @Override
     public void onFlowComplete()
     {
+        taskMonitor.stop();
+
         if (config.isVerbose())
         {
             logger.info("LogScan observer completed");
@@ -178,13 +191,36 @@ public class LogScanObserver implements TraceObserverV2
 
     /**
      * Called when a task is submitted.
+     * <p>
+     * Registers the task with the monitor for proactive exit code creation.
+     * </p>
      *
      * @param event the task event
      */
     @Override
     public void onTaskSubmit(TaskEvent event)
     {
-        // Not needed
+        if (!config.isEnabled())
+        {
+            return;
+        }
+
+        TraceRecord trace = event.getTrace();
+        if (trace == null)
+        {
+            return;
+        }
+
+        // Get task ID and work directory
+        Object taskIdObj = trace.get("task_id");
+        Object workdirObj = trace.get("workdir");
+
+        if (taskIdObj != null && workdirObj != null)
+        {
+            String taskId = taskIdObj.toString();
+            Path workDir = Paths.get(workdirObj.toString());
+            taskMonitor.registerTask(taskId, workDir);
+        }
     }
 
     /**
@@ -201,14 +237,13 @@ public class LogScanObserver implements TraceObserverV2
     /**
      * Called when a task completes (success or failure).
      * <p>
-     * Scans the task's log file for configured patterns and reports matches.
-     * This method runs AFTER the task has been finalized and error strategy
-     * applied, so it's primarily used for logging and reporting purposes.
+     * Unregisters the task from the monitor and performs verbose logging if enabled.
+     * This method runs AFTER the task has been finalized and error strategy applied.
      * </p>
      * <p>
-     * <b>NOTE:</b> The actual exit code modification happens in the injected
-     * afterScript (see onProcessCreate()), not here. This method is kept for
-     * backwards compatibility and additional logging.
+     * The actual exit code modification for externally-killed tasks happens in the
+     * TaskMonitor thread, which proactively scans logs and creates .exitcode files
+     * before Nextflow times out waiting for them.
      * </p>
      *
      * @param event the task event for the completed task
@@ -216,15 +251,21 @@ public class LogScanObserver implements TraceObserverV2
     @Override
     public void onTaskComplete(TaskEvent event)
     {
-        if (!config.isEnabled() || !config.isVerbose())
+        TraceRecord trace = event.getTrace();
+        if (trace == null)
         {
-            // Skip detailed logging if not in verbose mode
-            // The afterScript already reports pattern matches to stderr
             return;
         }
 
-        TraceRecord trace = event.getTrace();
-        if (trace == null)
+        // Unregister the task from monitoring
+        Object taskIdObj = trace.get("task_id");
+        if (taskIdObj != null)
+        {
+            taskMonitor.unregisterTask(taskIdObj.toString());
+        }
+
+        // Rest is just verbose logging
+        if (!config.isEnabled() || !config.isVerbose())
         {
             return;
         }
