@@ -264,7 +264,7 @@ public class LogScanObserver implements TraceObserverV2
             taskMonitor.unregisterTask(taskIdObj.toString());
         }
 
-        // Rest is just verbose logging
+        // Only continue if verbose logging is enabled
         if (!config.isEnabled() || !config.isVerbose())
         {
             return;
@@ -279,16 +279,8 @@ public class LogScanObserver implements TraceObserverV2
         }
 
         boolean success = (exitStatus != null && exitStatus == 0);
-        boolean shouldScan = false;
-
-        if (success && config.isScanOnSuccess())
-        {
-            shouldScan = true;
-        }
-        else if (!success && config.isScanOnFailure())
-        {
-            shouldScan = true;
-        }
+        boolean shouldScan = (success && config.isScanOnSuccess()) || 
+                             (!success && config.isScanOnFailure());
 
         if (!shouldScan)
         {

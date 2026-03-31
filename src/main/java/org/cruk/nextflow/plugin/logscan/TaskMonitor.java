@@ -274,7 +274,7 @@ public class TaskMonitor
         }
         catch (IOException e)
         {
-            logger.debug("Failed to scan log for task {}: {}", taskId, e.getMessage());
+            logger.debug("Failed to scan log for task {}", taskId, e);
         }
     }
 
