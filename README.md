@@ -4,20 +4,16 @@ A Nextflow plugin that scans task log files for configurable regex patterns and 
 
 ## Overview
 
-This plugin monitors Nextflow task completions and scans their `.command.log` files for configurable regex patterns. It uses a dual-mechanism approach:
-1. **In-band detection**: Injects an afterScript that scans logs and modifies `.exitcode` files before Nextflow reads them
-2. **Out-of-band detection**: Runs a background TaskMonitor thread that proactively detects tasks killed by SLURM or external systems
+This plugin monitors Nextflow task completions and scans their `.command.log` files for configurable regex patterns. It runs a background TaskMonitor thread that proactively detects tasks killed by SLURM or external systems (such as memory limit violations) and creates appropriate `.exitcode` files before Nextflow times out waiting for them.
 
 The plugin is particularly useful for detecting and handling memory limit violations by triggering task retries with increased memory.
 
 ## Features
 
-- Scans task log files on completion (success and/or failure)
+- Scans task log files when tasks are killed by external systems
 - Configurable regex patterns with case-sensitive/insensitive matching
 - **Exit code override**: Set custom exit codes when patterns match to trigger Nextflow errorStrategy
-- **Dual detection mechanism**: 
-  - Injected bash afterScript for tasks that complete normally
-  - Background TaskMonitor for tasks killed externally (SLURM OOM, GPU limits, etc.)
+- **Proactive monitoring**: Background TaskMonitor thread detects tasks killed externally (SLURM OOM, GPU limits, etc.)
 - Automatic detection of "memory limit" patterns with exit code 137
 - Configurable maximum lines to scan
 - Verbose logging mode for debugging
@@ -80,28 +76,13 @@ logScan {
 
 ## Usage
 
-The plugin automatically scans task log files when enabled. It uses two complementary mechanisms to detect patterns and override exit codes:
+The plugin automatically monitors tasks when enabled. It uses a background thread to detect patterns in task logs and create exit code files for tasks killed by external systems.
 
-### Exit Code Handling Mechanisms
+### Exit Code Handling Mechanism
 
-The plugin employs a **dual-mechanism approach** to ensure reliable detection:
+The plugin employs a **proactive monitoring approach** using a background TaskMonitor thread:
 
-#### 1. In-Band Detection (afterScript Injection)
-
-When a process is defined, the plugin injects a bash script into the `afterScript` section. This script:
-- Runs after the main task completes but before Nextflow reads the `.exitcode` file
-- Scans the `.command.log` file for configured patterns
-- Modifies the `.exitcode` file if a pattern matches
-- Works for tasks that complete normally (with or without errors)
-
-**When it works:**
-- Tasks that finish execution and write an exit code
-- Both successful and failed tasks (based on `scanOnSuccess`/`scanOnFailure` settings)
-
-**Limitations:**
-- Cannot help with tasks killed by external systems before writing `.exitcode`
-
-#### 2. Out-of-Band Detection (TaskMonitor Background Thread)
+#### TaskMonitor Background Thread
 
 A background daemon thread monitors all submitted tasks independently:
 - Checks every 5 seconds for tasks that have log files but no `.exitcode` file
@@ -120,9 +101,9 @@ A background daemon thread monitors all submitted tasks independently:
 - No `.exitcode` file exists yet
 - Log contains a pattern with a non-null `exitCode` value
 
-**Limitations:**
-- 5-second average detection delay (0-10 second window)
-- Only works during workflow execution (stops when workflow completes)
+**Timing:**
+- 5-second check interval (0-10 second detection window)
+- Only runs during workflow execution (stops when workflow completes)
 
 ### Exit Code Override
 
