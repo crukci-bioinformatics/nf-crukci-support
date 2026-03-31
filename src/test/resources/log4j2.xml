@@ -11,9 +11,9 @@
     </Appenders>
 
     <Loggers>
-        <Logger name="org.cruk" level="ERROR"/>
+        <Logger name="org.cruk" level="OFF"/>
 
-        <Root level="ERROR">
+        <Root level="OFF">
             <AppenderRef ref="console"/>
         </Root>
     </Loggers>
