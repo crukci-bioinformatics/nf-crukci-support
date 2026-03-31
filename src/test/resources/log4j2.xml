@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration
+    xmlns="https://logging.apache.org/xml/ns"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://logging.apache.org/xml/ns https://logging.apache.org/xml/ns/log4j-config-2.xsd">
+
+    <Appenders>
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%highlight{%date %level %logger{1} - %message%n%throwable}"/>
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <Logger name="org.cruk" level="ERROR"/>
+
+        <Root level="ERROR">
+            <AppenderRef ref="console"/>
+        </Root>
+    </Loggers>
+</Configuration>
