@@ -142,7 +142,7 @@ public class LogScanObserver implements TraceObserverV2
         try
         {
             injectLogScanAfterScript(processor);
-            
+
             if (config.isVerbose())
             {
                 logger.info("Injected log scan script into process: {}", processor.getName());
@@ -283,15 +283,15 @@ public class LogScanObserver implements TraceObserverV2
             {
                 Object nameObj = trace.get("name");
                 String taskName = nameObj != null ? nameObj.toString() : "unknown";
-                
-                logger.info("Task '{}' - LogScan found {} pattern match(es)", 
+
+                logger.info("Task '{}' - LogScan found {} pattern match(es)",
                     taskName, matches.size());
-                
+
                 for (LogScanner.ScanMatch match : matches)
                 {
-                    logger.debug("  Pattern '{}' at line {}: {}", 
+                    logger.debug("  Pattern '{}' at line {}: {}",
                         match.getPattern().getName(),
-                        match.getLineNumber(), 
+                        match.getLineNumber(),
                         match.getMatchedText());
                 }
             }
@@ -379,11 +379,11 @@ public class LogScanObserver implements TraceObserverV2
             }
 
             String scanScript = buildLogScanScript();
-            
+
             // Get existing afterScript
             Object existingAfterScript = processConfig.get("afterScript");
             String combinedScript;
-            
+
             if (existingAfterScript != null && !existingAfterScript.toString().trim().isEmpty())
             {
                 // Prepend our script so it runs first
@@ -393,7 +393,7 @@ public class LogScanObserver implements TraceObserverV2
             {
                 combinedScript = scanScript;
             }
-            
+
             // Set the combined afterScript
             processConfig.put("afterScript", combinedScript);
         }
@@ -423,11 +423,11 @@ public class LogScanObserver implements TraceObserverV2
     private String buildLogScanScript()
     {
         StringBuilder script = new StringBuilder();
-        
+
         script.append("# ==============================================================================\n");
         script.append("# LogScan Plugin: Log Pattern Scanner and Exit Code Modifier\n");
         script.append("# ==============================================================================\n\n");
-        
+
         // Read the original exit code
         script.append("# Read original exit code from .exitcode file\n");
         script.append("if [ -f .exitcode ]; then\n");
@@ -435,42 +435,42 @@ public class LogScanObserver implements TraceObserverV2
         script.append("else\n");
         script.append("  ORIGINAL_EXIT=$?\n");
         script.append("fi\n\n");
-        
+
         script.append("LOG_FILE=\".command.log\"\n");
         script.append("EXITCODE_FILE=\".exitcode\"\n\n");
-        
+
         // Check if we should scan based on configuration
         script.append("# Determine if we should scan based on configuration\n");
         script.append("SHOULD_SCAN=0\n");
-        
+
         if (config.isScanOnFailure())
         {
             script.append("[ \"$ORIGINAL_EXIT\" -ne 0 ] && SHOULD_SCAN=1\n");
         }
-        
+
         if (config.isScanOnSuccess())
         {
             script.append("[ \"$ORIGINAL_EXIT\" -eq 0 ] && SHOULD_SCAN=1\n");
         }
-        
+
         script.append("\n");
         script.append("if [ $SHOULD_SCAN -eq 0 ]; then\n");
         script.append("  exit 0\n");
         script.append("fi\n\n");
-        
+
         // Check if log file exists
         script.append("# Check if log file exists\n");
         script.append("if [ ! -f \"$LOG_FILE\" ]; then\n");
         script.append("  exit 0\n");
         script.append("fi\n\n");
-        
+
         // Scan for patterns
         script.append("# Scan log file for configured patterns\n");
         script.append("LINE_NUM=0\n");
         script.append("MAX_LINES=").append(config.getMaxLinesToScan()).append("\n");
         script.append("PATTERN_MATCHED=0\n");
         script.append("NEW_EXIT_CODE=\"\"\n\n");
-        
+
         script.append("while IFS= read -r line || [ -n \"$line\" ]; do\n");
         script.append("  LINE_NUM=$((LINE_NUM + 1))\n");
         script.append("  \n");
@@ -478,23 +478,23 @@ public class LogScanObserver implements TraceObserverV2
         script.append("  if [ $MAX_LINES -gt 0 ] && [ $LINE_NUM -gt $MAX_LINES ]; then\n");
         script.append("    break\n");
         script.append("  fi\n\n");
-        
+
         // Generate pattern checks
         List<LogScanConfig.ScanPattern> patterns = config.getPatterns();
         for (int i = 0; i < patterns.size(); i++)
         {
             LogScanConfig.ScanPattern pattern = patterns.get(i);
             Integer exitCode = pattern.getExitCode();
-            
+
             if (exitCode != null)
             {
                 // Get the regex string from the compiled Pattern
                 String regex = pattern.getPattern().pattern();
-                
+
                 // Check if pattern is case-insensitive
                 boolean caseSensitive = (pattern.getPattern().flags() & java.util.regex.Pattern.CASE_INSENSITIVE) == 0;
                 String grepFlags = caseSensitive ? "E" : "iE";
-                
+
                 script.append("  # Pattern ").append(i + 1).append(": ").append(pattern.getName()).append("\n");
                 script.append("  if [ $PATTERN_MATCHED -eq 0 ]; then\n");
                 script.append("    if echo \"$line\" | grep -q").append(grepFlags)
@@ -509,20 +509,20 @@ public class LogScanObserver implements TraceObserverV2
                 script.append("  fi\n\n");
             }
         }
-        
+
         script.append("done < \"$LOG_FILE\"\n\n");
-        
+
         // Update exit code file if pattern matched
         script.append("# Update .exitcode file if a pattern was matched\n");
         script.append("if [ $PATTERN_MATCHED -eq 1 ]; then\n");
         script.append("  echo \"$NEW_EXIT_CODE\" > \"$EXITCODE_FILE\"\n");
         script.append("  echo \"[LogScan] Updated $EXITCODE_FILE with new exit code\" >&2\n");
         script.append("fi\n\n");
-        
+
         // Always exit 0 from afterScript
         script.append("# Exit successfully - the .exitcode file will be read by Nextflow\n");
         script.append("exit 0\n");
-        
+
         return script.toString();
     }
 
