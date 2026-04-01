@@ -10,24 +10,23 @@
         <format>zip</format>
     </formats>
 
-    <fileSets>
-        <fileSet>
-            <directory>${project.build.directory}</directory>
-            <outputDirectory></outputDirectory>
-            <fileMode>0644</fileMode>
-            <directoryMode>0755</directoryMode>
+    <dependencySets>
+        <!-- Unpack the JAR contents into classes/ directory -->
+        <dependencySet>
+            <outputDirectory>/classes</outputDirectory>
+            <unpack>true</unpack>
             <includes>
-                <include>${project.artifactId}-${project.version}.jar</include>
+                <include>${project.groupId}:${project.artifactId}</include>
             </includes>
-        </fileSet>
-        <fileSet>
-            <directory>${project.basedir}</directory>
-            <outputDirectory></outputDirectory>
-            <includes>
-                <include>README*</include>
-                <include>LICENSE*</include>
-            </includes>
-        </fileSet>
-    </fileSets>
-
+        </dependencySet>
+        <!-- Add non-provided dependencies -->
+        <dependencySet>
+            <outputDirectory>/lib</outputDirectory>
+            <unpack>false</unpack>
+            <scope>runtime</scope>
+            <excludes>
+                <exclude>${project.groupId}:${project.artifactId}</exclude>
+            </excludes>
+        </dependencySet>
+    </dependencySets>
 </assembly>
