@@ -37,7 +37,7 @@ Add the plugin to your `nextflow.config`:
 
 ```groovy
 plugins {
-    id 'nf-crukci-support@1.0.0-SNAPSHOT'
+    id 'nf-crukci-support@<version>'
 }
 
 logScan {
@@ -73,6 +73,18 @@ logScan {
     ]
 }
 ```
+
+### Getting the Plugin
+
+At present this plugin is not part of the set of Nextflow plugins globally available. The only way to have the Nextflow automatically download the
+plugin for you is to set the `NXF_PLUGINS_TEST_REPOSITORY` environment variable to include our own `plugins.json`.
+
+```BASH
+export NXF_PLUGINS_TEST_REPOSITORY="https://github.com/crukci-bioinformatics/nextflow-plugins/raw/refs/heads/master/plugins.json,https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json"
+```
+
+Probably best put this into your `.bashrc`. If we put this plugin into the Nextflow main plugins file this will no longer be required, but we need
+to be sure it works properly before approaching the Nextflow people.
 
 ## Usage
 

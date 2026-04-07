@@ -29,7 +29,7 @@ public class LogScanConfig
     /**
      * Whether log scanning is enabled.
      */
-    private final boolean enabled;
+    private final boolean enabled = true;
 
     /**
      * Whether to scan logs for successful tasks.
@@ -39,7 +39,7 @@ public class LogScanConfig
     /**
      * Whether to scan logs for failed tasks.
      */
-    private final boolean scanOnFailure;
+    private final boolean scanOnFailure = true;
 
     /**
      * Maximum number of lines to scan (0 = unlimited).
