@@ -16,7 +16,6 @@ import nextflow.processor.TaskConfig
  * Provides helper functions for memory management, collection handling, and debugging.
  *
  * @author Richard Bowers
- * @since 1.0.0
  */
 class CRUKCIExtension extends PluginExtensionPoint
 {
