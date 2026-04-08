@@ -432,7 +432,7 @@
             <dependency>
                 <groupId>io.nextflow</groupId>
                 <artifactId>nextflow</artifactId>
-                <version>25.04.0</version>
+                <version>25.04.4</version>
                 <exclusions>
                     <exclusion>
                         <groupId>ch.qos.logback</groupId>

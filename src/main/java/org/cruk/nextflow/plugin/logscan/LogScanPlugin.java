@@ -40,7 +40,7 @@ public class LogScanPlugin extends BasePlugin
     @Override
     public void start()
     {
-        logger.info("nf-crukci-support plugin started");
+        logger.debug("nf-crukci-support plugin started");
     }
 
     /**
@@ -52,6 +52,6 @@ public class LogScanPlugin extends BasePlugin
     @Override
     public void stop()
     {
-        logger.info("nf-crukci-support plugin stopped");
+        logger.debug("nf-crukci-support plugin stopped");
     }
 }
