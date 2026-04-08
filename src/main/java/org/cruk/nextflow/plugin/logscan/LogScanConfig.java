@@ -161,12 +161,17 @@ public class LogScanConfig
             }
         }
 
-        // Add default memory limit pattern if no patterns configured
+        // Add default memory limit patterns if no patterns configured
         if (patterns.isEmpty())
         {
             patterns.add(new ScanPattern(
                 Pattern.compile("Exceeded job memory limit"),
                 "Memory Limit Exceeded",
+                137
+            ));
+            patterns.add(new ScanPattern(
+                Pattern.compile(Pattern.quote(OutOfMemoryError.class.getName())),
+                "Java Heap Exhausted",
                 137
             ));
         }

@@ -125,7 +125,13 @@ patterns = [
 
 ## Default Behavior
 
-If no patterns are configured, the plugin uses a default pattern:
-- Pattern: `Exceeded job memory limit`
-- Name: `Memory Limit Exceeded`
-- Exit code: `137` (standard exit code for memory limit violations)
+If no patterns are configured, the plugin uses two default patterns:
+
+  - Pattern 1 (catching SLURM process killing):
+    - Pattern: "`Exceeded job memory limit`"
+    - Name: "Memory Limit Exceeded"
+    - Exit code: 137
+  - Pattern 2 (Java heap exhaustion)
+    - Pattern: "`java.lang.OutOfMemoryError`"
+    - Name: "Java Heap Exhausted"
+    - Exit code: 137
