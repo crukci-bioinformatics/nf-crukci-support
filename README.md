@@ -25,8 +25,8 @@ mvn clean package
 
 2. Install to Nextflow plugins directory:
 ```bash
-mkdir -p ~/.nextflow/plugins/nf-crukci-support-1.0-SNAPSHOT
-cp target/nf-crukci-support-1.0-SNAPSHOT.jar ~/.nextflow/plugins/nf-crukci-support-1.0-SNAPSHOT/
+mkdir -p ~/.nextflow/plugins/nf-crukci-support-1.0.0
+cp target/nf-crukci-support-1.0.0.jar ~/.nextflow/plugins/nf-crukci-support-1.0.0/
 ```
 
 ## Configuration
