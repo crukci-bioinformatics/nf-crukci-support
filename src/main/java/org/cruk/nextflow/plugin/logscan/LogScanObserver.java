@@ -39,7 +39,7 @@ public class LogScanObserver implements TraceObserverV2
     /**
      * The task monitor for proactive exit code creation.
      */
-    private final TaskMonitor taskMonitor;
+    private final LogScanTaskMonitor taskMonitor;
 
     /**
      * Constructs a new LogScanObserver.
@@ -50,24 +50,18 @@ public class LogScanObserver implements TraceObserverV2
     public LogScanObserver(Session session, LogScanConfig config)
     {
         this.config = config;
-        this.taskMonitor = new TaskMonitor(config);
+        this.taskMonitor = new LogScanTaskMonitor(config);
     }
 
     /**
      * Called when the workflow is created.
-     * <p>
-     * Logs a message if verbose logging is enabled.
-     * </p>
      *
      * @param session the Nextflow session
      */
     @Override
     public void onFlowCreate(Session session)
     {
-        if (config.isVerbose())
-        {
-            logger.info("LogScan observer created");
-        }
+        logger.debug("LogScan observer created");
     }
 
     /**
@@ -81,16 +75,13 @@ public class LogScanObserver implements TraceObserverV2
     {
         taskMonitor.start();
 
-        if (config.isVerbose())
-        {
-            logger.info("LogScan observer - workflow begun");
-        }
+        logger.debug("LogScan observer - workflow begun");
     }
 
     /**
      * Called when the workflow completes.
      * <p>
-     * Stops the task monitor thread and logs a message if verbose logging is enabled.
+     * Stops the task monitor thread.
      * </p>
      */
     @Override
@@ -98,10 +89,7 @@ public class LogScanObserver implements TraceObserverV2
     {
         taskMonitor.stop();
 
-        if (config.isVerbose())
-        {
-            logger.info("LogScan observer completed");
-        }
+        logger.debug("LogScan observer completed");
     }
 
     /**
@@ -163,11 +151,6 @@ public class LogScanObserver implements TraceObserverV2
     @Override
     public void onTaskSubmit(TaskEvent event)
     {
-        if (!config.isEnabled())
-        {
-            return;
-        }
-
         TraceRecord trace = event.getTrace();
         if (trace == null)
         {
@@ -211,11 +194,6 @@ public class LogScanObserver implements TraceObserverV2
     @Override
     public void onTaskComplete(TaskEvent event)
     {
-        if (!config.isEnabled())
-        {
-            return;
-        }
-
         TraceRecord trace = event.getTrace();
         if (trace == null)
         {

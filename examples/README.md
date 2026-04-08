@@ -170,11 +170,9 @@ The `example.config` file demonstrates all available configuration options:
 
 ```groovy
 logScan {
-    enabled        = true       // Enable/disable the plugin
     scanOnSuccess  = false      // Scan successful task logs
     scanOnFailure  = true       // Scan failed task logs
     maxLinesToScan = 10000      // Maximum lines to scan (0 = unlimited)
-    verbose        = true       // Enable verbose logging
 
     patterns = [
         // Simple string pattern
@@ -196,8 +194,7 @@ logScan {
 Try modifying the configuration to see different behaviors:
 
 1. Set `scanOnSuccess = true` to see WARNING pattern detection in successful tasks
-2. Set `verbose = false` to reduce logging output
-3. Add your own patterns to detect
+2. Add your own patterns to detect
 4. Change exit codes to trigger different error handling strategies
 5. Adjust `maxLinesToScan` to limit scanning
 
@@ -297,9 +294,8 @@ If the plugin doesn't seem to be working:
 
 1. Check that the plugin JAR is in the correct location
 2. Verify the plugin ID in your config matches: `nf-crukci-support@1.0-SNAPSHOT`
-3. Enable verbose logging (`verbose = true`) to see detailed scan information
-4. Check that patterns are valid regex expressions
-5. Ensure you're running Nextflow 25.04.0 or newer
+3. Check that patterns are valid regex expressions
+4. Ensure you're running Nextflow 25.04.0 or newer
 
 ## Learn More
 

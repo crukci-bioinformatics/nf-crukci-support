@@ -120,17 +120,11 @@ public class LogScanner
 
         if (!Files.exists(logFile))
         {
-            if (config.isVerbose())
-            {
-                logger.debug("Log file does not exist: {}", logFile);
-            }
+            logger.debug("Log file does not exist: {}", logFile);
             return matches;
         }
 
-        if (config.isVerbose())
-        {
-            logger.debug("Scanning log file: {}", logFile);
-        }
+        logger.debug("Scanning log file: {}", logFile);
 
         int lineNumber = 0;
         int maxLines = config.getMaxLinesToScan();
@@ -145,10 +139,7 @@ public class LogScanner
                 // Check if we've reached the maximum lines to scan
                 if (maxLines > 0 && lineNumber > maxLines)
                 {
-                    if (config.isVerbose())
-                    {
-                        logger.debug("Reached max lines to scan: {}", maxLines);
-                    }
+                    logger.debug("Reached max lines to scan: {}", maxLines);
                     break;
                 }
 
@@ -161,11 +152,8 @@ public class LogScanner
                         String matchedText = matcher.group();
                         matches.add(new ScanMatch(scanPattern, lineNumber, matchedText));
 
-                        if (config.isVerbose())
-                        {
-                            logger.debug("Pattern '{}' matched at line {}: {}",
-                                scanPattern.getName(), lineNumber, matchedText);
-                        }
+                        logger.debug("Pattern '{}' matched at line {}: {}",
+                            scanPattern.getName(), lineNumber, matchedText);
                     }
                 }
             }

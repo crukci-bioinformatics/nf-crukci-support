@@ -28,19 +28,9 @@ public class LogScanConfig
     private static final Logger logger = LoggerFactory.getLogger(LogScanConfig.class);
 
     /**
-     * Whether log scanning is enabled.
-     */
-    private final boolean enabled;
-
-    /**
      * Maximum number of lines to scan (0 = unlimited).
      */
     private final int maxLinesToScan;
-
-    /**
-     * Whether to enable verbose logging.
-     */
-    private final boolean verbose;
 
     /**
      * List of compiled regex patterns to search for.
@@ -126,9 +116,7 @@ public class LogScanConfig
             config = Map.of();
         }
 
-        this.enabled = getBooleanValue(config, "enabled", true);
         this.maxLinesToScan = getIntValue(config, "maxLinesToScan", 10000);
-        this.verbose = getBooleanValue(config, "verbose", false);
 
         // Load patterns
         this.patterns = new ArrayList<>();
@@ -181,12 +169,6 @@ public class LogScanConfig
                 "Memory Limit Exceeded",
                 137
             ));
-        }
-
-        if (verbose)
-        {
-            logger.info("LogScan config: enabled={}, patterns={}, maxLinesToScan={}",
-                enabled, patterns.size(), maxLinesToScan);
         }
     }
 
@@ -245,16 +227,6 @@ public class LogScanConfig
     }
 
     /**
-     * Checks if log scanning is enabled.
-     *
-     * @return true if enabled
-     */
-    public boolean isEnabled()
-    {
-        return enabled;
-    }
-
-    /**
      * Gets the maximum number of lines to scan.
      *
      * @return the maximum lines (0 = unlimited)
@@ -262,16 +234,6 @@ public class LogScanConfig
     public int getMaxLinesToScan()
     {
         return maxLinesToScan;
-    }
-
-    /**
-     * Checks if verbose logging is enabled.
-     *
-     * @return true if verbose logging is enabled
-     */
-    public boolean isVerbose()
-    {
-        return verbose;
     }
 
     /**

@@ -16,7 +16,6 @@ The plugin is particularly useful for detecting and handling memory limit violat
 - **Exit code override**: Set custom exit codes when patterns match to trigger Nextflow errorStrategy
 - Automatic detection of "memory limit" patterns with exit code 137
 - Configurable maximum lines to scan
-- Verbose logging mode for debugging
 
 ## Installation
 
@@ -41,9 +40,7 @@ plugins {
 }
 
 logScan {
-    enabled        = true
     maxLinesToScan = 10000    // 0 = unlimited
-    verbose        = false    // Enable debug logging
 
     patterns = [
         // Simple string pattern (auto-detects memory limit)
@@ -86,7 +83,7 @@ to be sure it works properly before approaching the Nextflow people.
 
 ## Usage
 
-The plugin automatically monitors tasks when enabled. It uses a background thread to detect patterns in task logs and create exit code files for tasks killed by external systems.
+The plugin automatically monitors tasks. It uses a background thread to detect patterns in task logs and create exit code files for tasks killed by external systems.
 
 ### TaskMonitor Background Thread
 

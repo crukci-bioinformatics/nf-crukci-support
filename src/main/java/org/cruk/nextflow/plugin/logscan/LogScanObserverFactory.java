@@ -30,11 +30,11 @@ public class LogScanObserverFactory implements TraceObserverFactoryV2
      * Creates a collection of TraceObservers for the given session.
      * <p>
      * Reads configuration from the 'logScan' scope in the session config
-     * and creates a LogScanObserver if the plugin is enabled.
+     * and creates a LogScanObserver.
      * </p>
      *
      * @param session the Nextflow session
-     * @return a collection containing the LogScanObserver, or empty collection if disabled
+     * @return a collection containing the LogScanObserver
      */
     @Override
     @SuppressWarnings("unchecked")
@@ -52,14 +52,7 @@ public class LogScanObserverFactory implements TraceObserverFactoryV2
         // Create config object
         LogScanConfig config = new LogScanConfig(configMap);
 
-        // Only create observer if enabled
-        if (!config.isEnabled())
-        {
-            logger.debug("LogScan plugin is disabled");
-            return Collections.emptyList();
-        }
-
-        logger.info("Creating LogScan observer");
+        logger.debug("Creating LogScan observer");
         return Collections.singletonList(new LogScanObserver(session, config));
     }
 }

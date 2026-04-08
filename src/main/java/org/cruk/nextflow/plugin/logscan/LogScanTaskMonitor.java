@@ -31,12 +31,12 @@ import org.slf4j.LoggerFactory;
  *
  * @author Richard Bowers
  */
-public class TaskMonitor
+public class LogScanTaskMonitor
 {
     /**
      * Logger instance for this class.
      */
-    private static final Logger logger = LoggerFactory.getLogger(TaskMonitor.class);
+    private static final Logger logger = LoggerFactory.getLogger(LogScanTaskMonitor.class);
 
     /**
      * Configuration for log scanning.
@@ -74,7 +74,7 @@ public class TaskMonitor
      *
      * @param config the log scan configuration
      */
-    public TaskMonitor(LogScanConfig config)
+    public LogScanTaskMonitor(LogScanConfig config)
     {
         this.config = config;
         this.scanner = new LogScanner(config);
@@ -105,10 +105,7 @@ public class TaskMonitor
             TimeUnit.SECONDS
         );
 
-        if (config.isVerbose())
-        {
-            logger.info("TaskMonitor started (check interval: {}s)", CHECK_INTERVAL_SECONDS);
-        }
+        logger.info("LogScanTaskMonitor started (check interval: {}s)", CHECK_INTERVAL_SECONDS);
     }
 
     /**
@@ -136,10 +133,7 @@ public class TaskMonitor
             Thread.currentThread().interrupt();
         }
 
-        if (config.isVerbose())
-        {
-            logger.info("TaskMonitor stopped");
-        }
+        logger.info("LogScanTaskMonitor stopped");
     }
 
     /**
@@ -153,10 +147,7 @@ public class TaskMonitor
         if (taskId != null && workDir != null)
         {
             activeTasks.put(taskId, workDir);
-            if (config.isVerbose())
-            {
-                logger.debug("Registered task {} for monitoring: {}", taskId, workDir);
-            }
+            logger.debug("Registered task {} for monitoring: {}", taskId, workDir);
         }
     }
 
@@ -170,10 +161,7 @@ public class TaskMonitor
         if (taskId != null)
         {
             activeTasks.remove(taskId);
-            if (config.isVerbose())
-            {
-                logger.debug("Unregistered task {}", taskId);
-            }
+            logger.debug("Unregistered task {}", taskId);
         }
     }
 
@@ -293,9 +281,6 @@ public class TaskMonitor
             StandardOpenOption.TRUNCATE_EXISTING
         );
 
-        if (config.isVerbose())
-        {
-            logger.info("Created {} with exit code {}", exitFile, exitCode);
-        }
+        logger.info("Created {} with exit code {}", exitFile, exitCode);
     }
 }

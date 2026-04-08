@@ -1,11 +1,12 @@
 package org.cruk.nextflow.plugin.logscan;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for LogScanConfig.
@@ -22,9 +23,7 @@ class LogScanConfigTest
     {
         LogScanConfig config = new LogScanConfig(null);
 
-        assertTrue(config.isEnabled());
         assertEquals(10000, config.getMaxLinesToScan());
-        assertFalse(config.isVerbose());
 
         // Should have default memory limit pattern
         assertEquals(1, config.getPatterns().size());
@@ -39,16 +38,12 @@ class LogScanConfigTest
     void testCustomConfig()
     {
         Map<String, Object> configMap = Map.of(
-            "enabled", false,
-            "maxLinesToScan", 5000,
-            "verbose", true
+            "maxLinesToScan", 5000
         );
 
         LogScanConfig config = new LogScanConfig(configMap);
 
-        assertFalse(config.isEnabled());
         assertEquals(5000, config.getMaxLinesToScan());
-        assertTrue(config.isVerbose());
     }
 
     /**
