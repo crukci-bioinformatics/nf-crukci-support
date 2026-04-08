@@ -26,9 +26,13 @@ class LogScanConfigTest
         assertEquals(10000, config.getMaxLinesToScan());
 
         // Should have default memory limit pattern
-        assertEquals(1, config.getPatterns().size());
+        assertEquals(2, config.getPatterns().size());
+
         assertEquals("Memory Limit Exceeded", config.getPatterns().get(0).getName());
         assertEquals(137, config.getPatterns().get(0).getExitCode());
+
+        assertEquals("Java Heap Exhausted", config.getPatterns().get(1).getName());
+        assertEquals(137, config.getPatterns().get(1).getExitCode());
     }
 
     /**
