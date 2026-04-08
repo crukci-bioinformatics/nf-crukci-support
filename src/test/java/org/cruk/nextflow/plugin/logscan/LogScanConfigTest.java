@@ -23,8 +23,6 @@ class LogScanConfigTest
         LogScanConfig config = new LogScanConfig(null);
 
         assertTrue(config.isEnabled());
-        assertFalse(config.isScanOnSuccess());
-        assertTrue(config.isScanOnFailure());
         assertEquals(10000, config.getMaxLinesToScan());
         assertFalse(config.isVerbose());
 
@@ -42,8 +40,6 @@ class LogScanConfigTest
     {
         Map<String, Object> configMap = Map.of(
             "enabled", false,
-            "scanOnSuccess", true,
-            "scanOnFailure", false,
             "maxLinesToScan", 5000,
             "verbose", true
         );
@@ -51,8 +47,6 @@ class LogScanConfigTest
         LogScanConfig config = new LogScanConfig(configMap);
 
         assertFalse(config.isEnabled());
-        assertTrue(config.isScanOnSuccess());
-        assertFalse(config.isScanOnFailure());
         assertEquals(5000, config.getMaxLinesToScan());
         assertTrue(config.isVerbose());
     }

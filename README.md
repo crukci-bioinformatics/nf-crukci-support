@@ -1,19 +1,19 @@
 # nf-crukci-support
 
-A Nextflow plugin that scans task log files for configurable regex patterns and handles memory limit issues.
+A Nextflow plugin that proactively monitors task log files and handles external task terminations.
 
 ## Overview
 
-This plugin monitors Nextflow task completions and scans their `.command.log` files for configurable regex patterns. It runs a background TaskMonitor thread that proactively detects tasks killed by SLURM or external systems (such as memory limit violations) and creates appropriate `.exitcode` files before Nextflow times out waiting for them.
+This plugin monitors Nextflow tasks and proactively handles tasks killed by external systems (such as SLURM memory limits). It runs a background TaskMonitor thread that scans `.command.log` files for configurable regex patterns and creates appropriate `.exitcode` files before Nextflow times out waiting for them.
 
 The plugin is particularly useful for detecting and handling memory limit violations by triggering task retries with increased memory.
 
 ## Features
 
-- Scans task log files when tasks are killed by external systems
+- **Proactive monitoring**: Background TaskMonitor thread detects tasks killed externally (SLURM OOM, GPU limits, etc.)
+- Scans task log files while tasks are running
 - Configurable regex patterns with case-sensitive/insensitive matching
 - **Exit code override**: Set custom exit codes when patterns match to trigger Nextflow errorStrategy
-- **Proactive monitoring**: Background TaskMonitor thread detects tasks killed externally (SLURM OOM, GPU limits, etc.)
 - Automatic detection of "memory limit" patterns with exit code 137
 - Configurable maximum lines to scan
 - Verbose logging mode for debugging
@@ -27,8 +27,8 @@ mvn clean package
 
 2. Install to Nextflow plugins directory:
 ```bash
-mkdir -p ~/.nextflow/plugins/nf-crukci-support-1.0.0-SNAPSHOT
-cp target/nf-crukci-support-1.0.0-SNAPSHOT.jar ~/.nextflow/plugins/nf-crukci-support-1.0.0-SNAPSHOT/
+mkdir -p ~/.nextflow/plugins/nf-crukci-support-1.0-SNAPSHOT
+cp target/nf-crukci-support-1.0-SNAPSHOT.jar ~/.nextflow/plugins/nf-crukci-support-1.0-SNAPSHOT/
 ```
 
 ## Configuration
@@ -42,8 +42,6 @@ plugins {
 
 logScan {
     enabled        = true
-    scanOnSuccess  = false    // Scan logs of successful tasks
-    scanOnFailure  = true     // Scan logs of failed tasks
     maxLinesToScan = 10000    // 0 = unlimited
     verbose        = false    // Enable debug logging
 
@@ -90,17 +88,14 @@ to be sure it works properly before approaching the Nextflow people.
 
 The plugin automatically monitors tasks when enabled. It uses a background thread to detect patterns in task logs and create exit code files for tasks killed by external systems.
 
-### Exit Code Handling Mechanism
+### TaskMonitor Background Thread
 
-The plugin employs a **proactive monitoring approach** using a background TaskMonitor thread:
+The core functionality is provided by a background daemon thread that monitors all submitted tasks independently:
 
-#### TaskMonitor Background Thread
-
-A background daemon thread monitors all submitted tasks independently:
-- Checks every 5 seconds for tasks that have log files but no `.exitcode` file
-- Detects tasks killed by SLURM (OOM), resource managers, or external signals
-- Proactively creates `.exitcode` files before Nextflow times out
-- Prevents "task terminated by external system" errors
+- **Checks every 5 seconds** for tasks that have log files but no `.exitcode` file
+- **Detects tasks killed by SLURM** (OOM), resource managers, or external signals
+- **Proactively creates `.exitcode` files** before Nextflow times out
+- **Prevents "task terminated by external system" errors**
 
 **When it works:**
 - Tasks killed by SLURM for exceeding memory limits
@@ -159,7 +154,6 @@ patterns = [
         pattern: 'regex_pattern',      // Required: regex pattern to match
         name: 'Pattern Name',          // Optional: display name
         caseSensitive: true,           // Optional: default is true
-        triggerRetry: false,           // Optional: mark as retry trigger
         exitCode: null                 // Optional: exit code to set when matched
     ]
 ]
@@ -175,7 +169,6 @@ patterns = [
 If no patterns are configured, the plugin uses a default pattern:
 - Pattern: `Exceeded job memory limit`
 - Name: `Memory Limit Exceeded`
-- Triggers retry detection
 - Exit code: `137` (standard exit code for memory limit violations)
 
 ## Extension Functions

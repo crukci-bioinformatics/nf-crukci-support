@@ -12,7 +12,9 @@ import org.slf4j.LoggerFactory;
  * Configuration holder for the log scan plugin.
  * <p>
  * Reads configuration from the 'logScan' scope in nextflow.config
- * and provides structured access to plugin settings.
+ * and provides structured access to plugin settings. The TaskMonitor
+ * background thread uses this configuration to scan task logs for
+ * patterns while tasks are running.
  * </p>
  *
  * @author Richard Bowers
@@ -28,17 +30,7 @@ public class LogScanConfig
     /**
      * Whether log scanning is enabled.
      */
-    private final boolean enabled = true;
-
-    /**
-     * Whether to scan logs for successful tasks.
-     */
-    private final boolean scanOnSuccess;
-
-    /**
-     * Whether to scan logs for failed tasks.
-     */
-    private final boolean scanOnFailure = true;
+    private final boolean enabled;
 
     /**
      * Maximum number of lines to scan (0 = unlimited).
@@ -135,8 +127,6 @@ public class LogScanConfig
         }
 
         this.enabled = getBooleanValue(config, "enabled", true);
-        this.scanOnSuccess = getBooleanValue(config, "scanOnSuccess", false);
-        this.scanOnFailure = getBooleanValue(config, "scanOnFailure", true);
         this.maxLinesToScan = getIntValue(config, "maxLinesToScan", 10000);
         this.verbose = getBooleanValue(config, "verbose", false);
 
@@ -195,8 +185,8 @@ public class LogScanConfig
 
         if (verbose)
         {
-            logger.info("LogScan config: enabled={}, scanOnSuccess={}, scanOnFailure={}, patterns={}",
-                enabled, scanOnSuccess, scanOnFailure, patterns.size());
+            logger.info("LogScan config: enabled={}, patterns={}, maxLinesToScan={}",
+                enabled, patterns.size(), maxLinesToScan);
         }
     }
 
@@ -262,26 +252,6 @@ public class LogScanConfig
     public boolean isEnabled()
     {
         return enabled;
-    }
-
-    /**
-     * Checks if scanning should happen for successful tasks.
-     *
-     * @return true if successful tasks should be scanned
-     */
-    public boolean isScanOnSuccess()
-    {
-        return scanOnSuccess;
-    }
-
-    /**
-     * Checks if scanning should happen for failed tasks.
-     *
-     * @return true if failed tasks should be scanned
-     */
-    public boolean isScanOnFailure()
-    {
-        return scanOnFailure;
     }
 
     /**

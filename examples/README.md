@@ -38,8 +38,8 @@ From the repository root:
 ```bash
 cd nf-crukci-support
 mvn clean package
-mkdir -p ~/.nextflow/plugins/nf-crukci-support-1.0.0-SNAPSHOT
-cp target/nf-crukci-support-1.0.0-SNAPSHOT.jar ~/.nextflow/plugins/nf-crukci-support-1.0.0-SNAPSHOT/
+mkdir -p ~/.nextflow/plugins/nf-crukci-support-1.0-SNAPSHOT
+cp target/nf-crukci-support-1.0-SNAPSHOT.jar ~/.nextflow/plugins/nf-crukci-support-1.0-SNAPSHOT/
 ```
 
 ### 2. Run the Log Scanning Example
@@ -296,7 +296,7 @@ Handles InvocationTargetException specially to log the real cause.
 If the plugin doesn't seem to be working:
 
 1. Check that the plugin JAR is in the correct location
-2. Verify the plugin ID in your config matches: `nf-crukci-support@1.0.0-SNAPSHOT`
+2. Verify the plugin ID in your config matches: `nf-crukci-support@1.0-SNAPSHOT`
 3. Enable verbose logging (`verbose = true`) to see detailed scan information
 4. Check that patterns are valid regex expressions
 5. Ensure you're running Nextflow 25.04.0 or newer
