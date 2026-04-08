@@ -11,7 +11,7 @@ It also provides some functions used throughout the CRUK-CI pipelines.
 - **Exit code override**: Set custom exit codes when patterns match to trigger Nextflow errorStrategy
 - Automatic detection of "memory limit" patterns with exit code 137
 - Configurable maximum lines to scan
-- Five supporting functions.
+- Six supporting functions.
 
 The log scanning functionality is documented in [LogScan.md](docs/LogScan.md). The extension functions
 are documented in [Functions.md](docs/Functions.md).
