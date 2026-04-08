@@ -11,7 +11,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for LogScanConfig.
  *
  * @author Richard Bowers
- * @since 1.0.0
  */
 class LogScanConfigTest
 {

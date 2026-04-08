@@ -7,6 +7,5 @@
  * include { javaMemMB; javaMemoryOptions; sizeOf; makeCollection; safeName; logException } from 'plugin/nf-crukci-support'
  * </pre>
  *
- * @since 1.0.0
  */
 package org.cruk.nextflow.plugin.extension;

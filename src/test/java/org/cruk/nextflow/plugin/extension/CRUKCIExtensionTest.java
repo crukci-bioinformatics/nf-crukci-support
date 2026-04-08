@@ -32,7 +32,6 @@ import nextflow.script.ScriptBinding;
  * Unit tests for CRUKCIExtension.
  *
  * @author Richard Bowers
- * @since 1.0.0
  */
 @ExtendWith(MockitoExtension.class)
 class CRUKCIExtensionTest

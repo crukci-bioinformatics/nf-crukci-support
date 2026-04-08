@@ -11,6 +11,5 @@
  * lifecycle hooks to monitor task completions and perform log scanning.
  * </p>
  *
- * @since 1.0.0
  */
 package org.cruk.nextflow.plugin.logscan;

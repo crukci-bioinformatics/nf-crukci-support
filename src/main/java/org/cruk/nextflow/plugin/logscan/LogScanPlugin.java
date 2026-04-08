@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
  * </p>
  *
  * @author Richard Bowers
- * @since 1.0.0
  */
 public class LogScanPlugin extends BasePlugin
 {

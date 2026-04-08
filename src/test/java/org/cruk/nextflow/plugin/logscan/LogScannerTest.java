@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for LogScanner.
  *
  * @author Richard Bowers
- * @since 1.0.0
  */
 class LogScannerTest
 {
