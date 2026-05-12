@@ -1,21 +1,31 @@
-package org.cruk.nextflow.plugin.logscan;
+package org.cruk.nextflow.plugin.crukci.logscan;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.lenient;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.cruk.nextflow.plugin.crukci.CRUKCIConfig;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import nextflow.Session;
 
 /**
  * Tests for LogScanner.
  *
  * @author Richard Bowers
  */
+@ExtendWith(MockitoExtension.class)
 class LogScannerTest
 {
     /**
@@ -23,6 +33,18 @@ class LogScannerTest
      */
     @TempDir
     Path tempDir;
+
+    @Mock
+    Session session;
+
+    LogScannerTest() { }
+
+    private void setup(Map<String, Object> config)
+    {
+        Map<String, Object> configMap = new HashMap<>();
+        configMap.put("crukci", config);
+        lenient().when(session.getConfig()).thenReturn(configMap);
+    }
 
     /**
      * Tests scanning a log file with matches.
@@ -44,7 +66,8 @@ class LogScannerTest
         Map<String, Object> configMap = Map.of(
             "patterns", List.of("ERROR", "WARNING")
         );
-        LogScanConfig config = new LogScanConfig(configMap);
+        setup(configMap);
+        CRUKCIConfig config = new CRUKCIConfig(session);
         LogScanner scanner = new LogScanner(config);
 
         // Scan the file
@@ -53,13 +76,13 @@ class LogScannerTest
         // Verify matches
         assertEquals(2, matches.size());
 
-        assertEquals("ERROR", matches.get(0).getPattern().getName());
-        assertEquals(2, matches.get(0).getLineNumber());
-        assertEquals("ERROR", matches.get(0).getMatchedText());
+        assertEquals("ERROR", matches.get(0).pattern.name);
+        assertEquals(2, matches.get(0).lineNumber);
+        assertEquals("ERROR", matches.get(0).matchedText);
 
-        assertEquals("WARNING", matches.get(1).getPattern().getName());
-        assertEquals(4, matches.get(1).getLineNumber());
-        assertEquals("WARNING", matches.get(1).getMatchedText());
+        assertEquals("WARNING", matches.get(1).pattern.name);
+        assertEquals(4, matches.get(1).lineNumber);
+        assertEquals("WARNING", matches.get(1).matchedText);
     }
 
     /**
@@ -70,7 +93,8 @@ class LogScannerTest
     {
         Path logFile = tempDir.resolve("nonexistent.log");
 
-        LogScanConfig config = new LogScanConfig(null);
+        setup(null);
+        CRUKCIConfig config = new CRUKCIConfig(session);
         LogScanner scanner = new LogScanner(config);
 
         List<LogScanner.ScanMatch> matches = scanner.scanLogFile(logFile);
@@ -99,7 +123,8 @@ class LogScannerTest
             "patterns", List.of("ERROR"),
             "maxLinesToScan", 10
         );
-        LogScanConfig config = new LogScanConfig(configMap);
+        setup(configMap);
+        CRUKCIConfig config = new CRUKCIConfig(session);
         LogScanner scanner = new LogScanner(config);
 
         // Scan the file
@@ -107,7 +132,7 @@ class LogScannerTest
 
         // Should only find matches in first 10 lines
         assertEquals(10, matches.size());
-        assertEquals(10, matches.get(9).getLineNumber());
+        assertEquals(10, matches.get(9).lineNumber);
     }
 
     /**
@@ -128,7 +153,8 @@ class LogScannerTest
                 Map.of("pattern", "error", "caseSensitive", false)
             )
         );
-        LogScanConfig config = new LogScanConfig(configMap);
+        setup(configMap);
+        CRUKCIConfig config = new CRUKCIConfig(session);
         LogScanner scanner = new LogScanner(config);
 
         List<LogScanner.ScanMatch> matches = scanner.scanLogFile(logFile);
@@ -151,13 +177,14 @@ class LogScannerTest
             "Task failed\n"
         );
 
-        LogScanConfig config = new LogScanConfig(null); // Uses default pattern
+        setup(null);
+        CRUKCIConfig config = new CRUKCIConfig(session);
         LogScanner scanner = new LogScanner(config);
 
         List<LogScanner.ScanMatch> matches = scanner.scanLogFile(logFile);
 
         assertEquals(1, matches.size());
-        assertEquals(3, matches.get(0).getLineNumber());
-        assertEquals(137, matches.get(0).getPattern().getExitCode());
+        assertEquals(3, matches.get(0).lineNumber);
+        assertEquals(137, matches.get(0).pattern.exitCode);
     }
 }

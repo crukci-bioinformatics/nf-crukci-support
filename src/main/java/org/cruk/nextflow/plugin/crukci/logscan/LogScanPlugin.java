@@ -1,4 +1,4 @@
-package org.cruk.nextflow.plugin.logscan;
+package org.cruk.nextflow.plugin.crukci.logscan;
 
 import nextflow.plugin.BasePlugin;
 import org.pf4j.PluginWrapper;

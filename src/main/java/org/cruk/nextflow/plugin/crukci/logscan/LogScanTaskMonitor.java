@@ -1,4 +1,4 @@
-package org.cruk.nextflow.plugin.logscan;
+package org.cruk.nextflow.plugin.crukci.logscan;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.cruk.nextflow.plugin.crukci.CRUKCIConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,11 +38,6 @@ public class LogScanTaskMonitor
      * Logger instance for this class.
      */
     private static final Logger logger = LoggerFactory.getLogger(LogScanTaskMonitor.class);
-
-    /**
-     * Configuration for log scanning.
-     */
-    private final LogScanConfig config;
 
     /**
      * The log scanner instance.
@@ -74,9 +70,8 @@ public class LogScanTaskMonitor
      *
      * @param config the log scan configuration
      */
-    public LogScanTaskMonitor(LogScanConfig config)
+    public LogScanTaskMonitor(CRUKCIConfig config)
     {
-        this.config = config;
         this.scanner = new LogScanner(config);
         this.activeTasks = new ConcurrentHashMap<>();
         this.executor = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -175,7 +170,7 @@ public class LogScanTaskMonitor
             return;
         }
 
-        for (Map.Entry<String, Path> entry : activeTasks.entrySet())
+        for (var entry : activeTasks.entrySet())
         {
             String taskId = entry.getKey();
             Path workDir = entry.getValue();
@@ -236,28 +231,22 @@ public class LogScanTaskMonitor
         try
         {
             List<LogScanner.ScanMatch> matches = scanner.scanLogFile(logFile);
-            if (matches.isEmpty())
+            if (!matches.isEmpty())
             {
-                return;
+                // Found pattern matches - create exit code file
+                LogScanner.ScanMatch firstMatch = matches.get(0);
+                CRUKCIConfig.ScanPattern matchedPattern = firstMatch.pattern;
+                int exitCode = matchedPattern.exitCode == null ? 1 : matchedPattern.exitCode.intValue();
+
+                createExitCodeFile(exitFile, exitCode);
+
+                logger.warn(
+                    "Task {} killed by external system - pattern '{}' detected in log, created .exitcode with status {}",
+                    taskId, matchedPattern.name, exitCode);
+
+                // Unregister this task - we've handled it
+                unregisterTask(taskId);
             }
-
-            // Found pattern matches - create exit code file
-            LogScanner.ScanMatch firstMatch = matches.get(0);
-            LogScanConfig.ScanPattern matchedPattern = firstMatch.getPattern();
-            Integer exitCodeObj = matchedPattern.getExitCode();
-            int exitCode = (exitCodeObj != null) ? exitCodeObj : 1;
-
-            createExitCodeFile(exitFile, exitCode);
-
-            logger.warn(
-                "Task {} killed by external system - pattern '{}' detected in log, created .exitcode with status {}",
-                taskId,
-                matchedPattern.getName(),
-                exitCode
-            );
-
-            // Unregister this task - we've handled it
-            unregisterTask(taskId);
         }
         catch (IOException e)
         {

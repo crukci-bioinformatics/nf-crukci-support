@@ -12,4 +12,4 @@
  * </p>
  *
  */
-package org.cruk.nextflow.plugin.logscan;
+package org.cruk.nextflow.plugin.crukci.logscan;

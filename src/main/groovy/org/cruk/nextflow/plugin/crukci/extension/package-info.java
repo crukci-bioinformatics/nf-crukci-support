@@ -1,6 +1,6 @@
 /**
  * Extension classes providing additional DSL functionality for Nextflow pipelines.
- * 
+ *
  * <p>This package contains CRUK CI utility extensions that can be included
  * in Nextflow pipelines using:</p>
  * <pre>
@@ -8,4 +8,4 @@
  * </pre>
  *
  */
-package org.cruk.nextflow.plugin.extension;
+package org.cruk.nextflow.plugin.crukci.extension;

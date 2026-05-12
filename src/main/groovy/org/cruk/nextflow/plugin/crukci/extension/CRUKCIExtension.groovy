@@ -1,8 +1,9 @@
-package org.cruk.nextflow.plugin.extension
+package org.cruk.nextflow.plugin.crukci.extension
 
 import java.lang.reflect.InvocationTargetException
 import java.text.*
 
+import org.cruk.nextflow.plugin.crukci.CRUKCIConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -62,8 +63,8 @@ class CRUKCIExtension extends PluginExtensionPoint
     /**
      * Provide OpenJDK JVM memory configuration based on the memory given to the task.
      * Allocates a maximum Java meta space size, which is 128MB by default but can be
-     * changed by defining the parameter "java_metaspace_size", down to a minimum of
-     * 64MB (no maximum). Likewise the "java_overhead_size" parameter can give a size
+     * changed by configuring the plugin to set "javaMetaspaceSize", down to a minimum of
+     * 64MB (no maximum). Likewise the "javaOverhead" parameter can give a size
      * for other memory overheads, down to a minimum of 32MB.
      * What's left of the task's memory after allocating the meta
      * space size plus the miscellaneous overhead is allocated for the JVM's heap.
@@ -84,45 +85,26 @@ class CRUKCIExtension extends PluginExtensionPoint
     @Function
     def javaMemoryOptions(TaskConfig task)
     {
-        final def minimumHeap = 16 // The absolute minimum heap size.
-        final def minimumMeta = 64 // The smallest allowed meta space size.
-        final def minimumOverhead = 32 // The smallest allowed margin for other overheads.
+        final long taskAllocation = task.memory.mega
 
-        final def taskAllocation = task.memory.mega
+        final def crukciConfig = new CRUKCIConfig(session)
 
-        // Get params from session config
-        def params = session.params
+        final long heap = taskAllocation - crukciConfig.javaOverhead - crukciConfig.javaMetaspace
 
-        // Miscellaneous overhead for JNI, ByteBuffers etc.
-        def overhead = params.getOrDefault('java_overhead_size', 64) * task.attempt
-        if (overhead < minimumOverhead)
+        if (heap < CRUKCIConfig.MINIMUM_JAVA_HEAP)
         {
-            logger.warn "java_overhead_size is set to ${overhead}, which is too small. Setting to the minimum of ${minimumOverhead}MB."
-            overhead = minimumOverhead
-        }
-
-        // Meta space allocation.
-        def metaSpace = params.getOrDefault('java_metaspace_size', 128) * task.attempt
-        if (metaSpace < minimumMeta)
-        {
-            logger.warn "java_metaspace_size is set to ${metaSpace}, which is too small. Setting to the minimum of ${minimumMeta}MB."
-            metaSpace = minimumMeta
-        }
-
-        def heap = taskAllocation - overhead - metaSpace
-
-        if (heap < minimumHeap)
-        {
-            logger.error "Task ${task.name} attempt ${task.attempt}: allocated ${taskAllocation}MB; JVM overhead ${overhead}MB; Java Meta Space ${metaSpace}MB"
-            throw new Exception("No memory left after taking JVM overheads. Need at least ${overhead + metaSpace + minimumHeap} MB allocated.")
+            logger.error("Task {} attempt {}: allocated {}MB; JVM overhead {}MB; Java Meta Space {}MB.",
+                         task.name,task.attempt, taskAllocation, crukciConfig.javaOverhead, crukciConfig.javaMetaspace)
+            def requiredMin = crukciConfig.javaOverhead + crukciConfig.javaMetaspace + CRUKCIConfig.MINIMUM_JAVA_HEAP
+            throw new Exception("No memory left after taking JVM overheads. Need at least ${requiredMin} MB allocated.")
         }
 
         def info = new Expando()
         info.heap = heap
-        info.metaSpace = metaSpace
-        info.misc = overhead
+        info.metaSpace = crukciConfig.javaMetaspace
+        info.misc = crukciConfig.javaOverhead
         info.all = taskAllocation
-        info.jvmOpts = "-XX:MaxMetaspaceSize=${metaSpace}m -Xms${heap}m -Xmx${heap}m"
+        info.jvmOpts = "-XX:MaxMetaspaceSize=${crukciConfig.javaMetaspace}m -Xms${heap}m -Xmx${heap}m"
 
         return info
     }

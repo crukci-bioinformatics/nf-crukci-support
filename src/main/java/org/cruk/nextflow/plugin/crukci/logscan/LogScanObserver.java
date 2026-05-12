@@ -1,17 +1,15 @@
-package org.cruk.nextflow.plugin.logscan;
+package org.cruk.nextflow.plugin.crukci.logscan;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import nextflow.Session;
-import nextflow.processor.TaskProcessor;
-import nextflow.trace.TraceObserverV2;
-import nextflow.trace.TraceRecord;
-import nextflow.trace.event.TaskEvent;
-import nextflow.trace.event.FilePublishEvent;
-import nextflow.trace.event.WorkflowOutputEvent;
+import org.cruk.nextflow.plugin.crukci.CRUKCIConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import nextflow.Session;
+import nextflow.trace.TraceRecord;
+import nextflow.trace.event.TaskEvent;
 
 /**
  * Observer that monitors running tasks and proactively creates exit code files.
@@ -24,17 +22,12 @@ import org.slf4j.LoggerFactory;
  *
  * @author Richard Bowers
  */
-public class LogScanObserver implements TraceObserverV2
+public class LogScanObserver extends TraceObserverV2Adapter
 {
     /**
      * Logger instance for this class.
      */
     private static final Logger logger = LoggerFactory.getLogger(LogScanObserver.class);
-
-    /**
-     * Configuration for log scanning.
-     */
-    private final LogScanConfig config;
 
     /**
      * The task monitor for proactive exit code creation.
@@ -47,9 +40,8 @@ public class LogScanObserver implements TraceObserverV2
      * @param session the Nextflow session (not used, kept for compatibility)
      * @param config the log scan configuration
      */
-    public LogScanObserver(Session session, LogScanConfig config)
+    public LogScanObserver(Session session, CRUKCIConfig config)
     {
-        this.config = config;
         this.taskMonitor = new LogScanTaskMonitor(config);
     }
 
@@ -93,54 +85,6 @@ public class LogScanObserver implements TraceObserverV2
     }
 
     /**
-     * Called when a workflow encounters an error.
-     *
-     * @param event the task event
-     */
-    @Override
-    public void onFlowError(TaskEvent event)
-    {
-        // Not needed
-    }
-
-    /**
-     * Called when a process is created.
-     * <p>
-     * This hook is no longer used for afterScript injection. The TaskMonitor
-     * background thread handles all log scanning and exit code creation.
-     * </p>
-     *
-     * @param processor the task processor
-     */
-    @Override
-    public void onProcessCreate(TaskProcessor processor)
-    {
-        // No action needed - TaskMonitor handles all log scanning
-    }
-
-    /**
-     * Called when a process terminates.
-     *
-     * @param processor the task processor
-     */
-    @Override
-    public void onProcessTerminate(TaskProcessor processor)
-    {
-        // Not needed
-    }
-
-    /**
-     * Called when a task is pending.
-     *
-     * @param event the task event
-     */
-    @Override
-    public void onTaskPending(TaskEvent event)
-    {
-        // Not needed
-    }
-
-    /**
      * Called when a task is submitted.
      * <p>
      * Registers the task with the monitor for proactive exit code creation.
@@ -170,17 +114,6 @@ public class LogScanObserver implements TraceObserverV2
     }
 
     /**
-     * Called when a task starts.
-     *
-     * @param event the task event
-     */
-    @Override
-    public void onTaskStart(TaskEvent event)
-    {
-        // Not needed
-    }
-
-    /**
      * Called when a task completes (success or failure).
      * <p>
      * Unregisters the task from the monitor. The actual exit code modification
@@ -206,52 +139,5 @@ public class LogScanObserver implements TraceObserverV2
         {
             taskMonitor.unregisterTask(taskIdObj.toString());
         }
-    }
-
-    /**
-     * Called when a task is retrieved from cache.
-     * <p>
-     * Cached tasks don't need monitoring as they don't actually run.
-     * </p>
-     *
-     * @param event the task event for the cached task
-     */
-    @Override
-    public void onTaskCached(TaskEvent event)
-    {
-        // Cached tasks don't run, so no monitoring needed
-    }
-
-    /**
-     * Called when a workflow output is published.
-     *
-     * @param event the workflow output event
-     */
-    @Override
-    public void onWorkflowOutput(WorkflowOutputEvent event)
-    {
-        // Not needed
-    }
-
-    /**
-     * Called when a file is published.
-     *
-     * @param event the file publish event
-     */
-    @Override
-    public void onFilePublish(FilePublishEvent event)
-    {
-        // Not needed
-    }
-
-    /**
-     * Indicates whether metrics are enabled.
-     *
-     * @return false
-     */
-    @Override
-    public boolean enableMetrics()
-    {
-        return false;
     }
 }

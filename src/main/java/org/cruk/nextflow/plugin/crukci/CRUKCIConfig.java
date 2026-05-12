@@ -1,6 +1,8 @@
-package org.cruk.nextflow.plugin.logscan;
+package org.cruk.nextflow.plugin.crukci;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -8,34 +10,79 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import nextflow.Session;
+
 /**
- * Configuration holder for the log scan plugin.
+ * Configuration holder for the CRUK-CI plugin.
  * <p>
- * Reads configuration from the 'logScan' scope in nextflow.config
- * and provides structured access to plugin settings. The TaskMonitor
- * background thread uses this configuration to scan task logs for
- * patterns while tasks are running.
+ * Reads configuration from the 'crukci' scope in nextflow.config
+ * and provides structured access to plugin settings.
  * </p>
  *
  * @author Richard Bowers
  */
-public class LogScanConfig
+public class CRUKCIConfig
 {
+    /**
+     * The smallest allowed margin for JVM overheads.
+     */
+    public static final int MINIMUM_JAVA_OVERHEAD = 32;
+
+    /**
+     * The default margin for JVM overheads.
+     */
+    public static final int DEFAULT_JAVA_OVERHEAD = 64;
+
+    /**
+     * The smallest allowed meta space size (class definitions etc).
+     */
+    public static final int MINIMUM_JAVA_METASPACE = 64;
+
+    /**
+     * The default meta space size.
+     */
+    public static final int DEFAULT_JAVA_METASPACE = 128;
+
+    /**
+     * The smallest allowed Java heap size to be functional.
+     */
+    public static final int MINIMUM_JAVA_HEAP = 16;
+
+    /**
+     * The default number of log lines to scan to find error patterns.
+     */
+    public static final int DEFAULT_LINES_TO_SCAN = 10000;
+
     /**
      * Logger instance for this class.
      */
-    @SuppressWarnings("unused")
-    private static final Logger logger = LoggerFactory.getLogger(LogScanConfig.class);
+    private static Logger logger = LoggerFactory.getLogger(CRUKCIConfig.class);
 
     /**
-     * Maximum number of lines to scan (0 = unlimited).
+     * Flag to prevent the user getting messages about too small memory allocations
+     * multiple times.
      */
-    private final int maxLinesToScan;
+    private static boolean limitsWarned = false;
+
+    /**
+     * Size in megabytes for the JVM overhead.
+     */
+    public final int javaOverhead;
+
+    /**
+     * Size in megabytes for the JVM metaspace overhead.
+     */
+    public final int javaMetaspace;
+
+    /**
+     * Maximum number of lines to scan (0 &lt;= is unlimited).
+     */
+    public final int maxLinesToScan;
 
     /**
      * List of compiled regex patterns to search for.
      */
-    private final List<ScanPattern> patterns;
+    public final List<ScanPattern> patterns;
 
     /**
      * Represents a pattern to scan for in log files.
@@ -45,18 +92,18 @@ public class LogScanConfig
         /**
          * The compiled regex pattern.
          */
-        private final Pattern pattern;
+        public final Pattern pattern;
 
         /**
          * The name/description of this pattern.
          */
-        private final String name;
+        public final String name;
 
         /**
          * The exit code to set when this pattern is matched.
          * A value of null means no exit code override.
          */
-        private final Integer exitCode;
+        public final Integer exitCode;
 
         /**
          * Constructs a new ScanPattern.
@@ -71,60 +118,55 @@ public class LogScanConfig
             this.name = name;
             this.exitCode = exitCode;
         }
-
-        /**
-         * Gets the compiled regex pattern.
-         *
-         * @return the pattern
-         */
-        public Pattern getPattern()
-        {
-            return pattern;
-        }
-
-        /**
-         * Gets the name/description of this pattern.
-         *
-         * @return the pattern name
-         */
-        public String getName()
-        {
-            return name;
-        }
-
-        /**
-         * Gets the exit code to set when this pattern is matched.
-         *
-         * @return the exit code, or null if no exit code override is configured
-         */
-        public Integer getExitCode()
-        {
-            return exitCode;
-        }
     }
 
     /**
-     * Constructs a new LogScanConfig from a configuration map.
+     * Constructs a new LogScanConfig from a configuration map in the Nextflow session.
      *
-     * @param config the configuration map from nextflow.config
+     * @param session The Nextflow session.
      */
     @SuppressWarnings("unchecked")
-    public LogScanConfig(Map<String, Object> config)
+    public CRUKCIConfig(Session session)
     {
-        if (config == null)
+        Map<String, Object> configMap = Collections.emptyMap();
+
+        Object config = session.getConfig().get("crukci");
+        if (config instanceof Map map)
         {
-            config = Map.of();
+            configMap = map;
         }
 
-        this.maxLinesToScan = getIntValue(config, "maxLinesToScan", 10000);
+        int overhead = getIntValue(configMap, "javaOverhead", DEFAULT_JAVA_OVERHEAD);
+        if (overhead < MINIMUM_JAVA_OVERHEAD)
+        {
+            if (!limitsWarned)
+            {
+                logger.warn("javaOverhead is set to {}, which is too small. Setting to the minimum of {}MB.", overhead, MINIMUM_JAVA_OVERHEAD);
+            }
+            overhead = MINIMUM_JAVA_OVERHEAD;
+        }
+        this.javaOverhead = overhead;
+
+        int metaspace = getIntValue(configMap, "javaMetaspace", DEFAULT_JAVA_METASPACE);
+        if (metaspace < MINIMUM_JAVA_METASPACE)
+        {
+            if (!limitsWarned)
+            {
+                logger.warn("javaMetaspace is set to {}, which is too small. Setting to the minimum of {}MB.", metaspace, MINIMUM_JAVA_METASPACE);
+            }
+            metaspace = MINIMUM_JAVA_METASPACE;
+        }
+        this.javaMetaspace = metaspace;
+
+        this.maxLinesToScan = getIntValue(configMap, "maxLinesToScan", 10000);
 
         // Load patterns
-        this.patterns = new ArrayList<>();
-        Object patternsObj = config.get("patterns");
+        Object patternsObj = configMap.get("patterns");
 
-        if (patternsObj instanceof List)
+        List<ScanPattern> patterns = new ArrayList<>();
+
+        if (patternsObj instanceof Collection<?> patternsList)
         {
-            List<?> patternsList = (List<?>) patternsObj;
             for (Object patternObj : patternsList)
             {
                 if (patternObj instanceof String patternStr)
@@ -161,20 +203,20 @@ public class LogScanConfig
             }
         }
 
-        // Add default memory limit patterns if no patterns configured
-        if (patterns.isEmpty())
-        {
-            patterns.add(new ScanPattern(
-                Pattern.compile("Exceeded job memory limit"),
-                "Memory Limit Exceeded",
-                137
-            ));
-            patterns.add(new ScanPattern(
-                Pattern.compile(Pattern.quote(OutOfMemoryError.class.getName())),
-                "Java Heap Exhausted",
-                137
-            ));
-        }
+        // Add the default patterns to the configured list.
+        patterns.add(new ScanPattern(
+            Pattern.compile("Exceeded job memory limit"),
+            "Memory Limit Exceeded",
+            137
+        ));
+        patterns.add(new ScanPattern(
+            Pattern.compile(Pattern.quote(OutOfMemoryError.class.getName())),
+            "Java Heap Exhausted",
+            137
+        ));
+
+        this.patterns = Collections.unmodifiableList(patterns);
+        limitsWarned = true;
     }
 
     /**
@@ -183,14 +225,15 @@ public class LogScanConfig
      * @param map the map to read from
      * @param key the key to look up
      * @param defaultValue the default value if not found
-     * @return the boolean value
+     *
+     * @return The value from the map, or the default value.
      */
     private boolean getBooleanValue(Map<String, Object> map, String key, boolean defaultValue)
     {
         Object value = map.get(key);
-        if (value instanceof Boolean)
+        if (value instanceof Boolean bool)
         {
-            return (Boolean) value;
+            return bool.booleanValue();
         }
         return defaultValue;
     }
@@ -201,7 +244,8 @@ public class LogScanConfig
      * @param map the map to read from
      * @param key the key to look up
      * @param defaultValue the default value if not found
-     * @return the integer value
+     *
+     * @return The value from the map, or the default value.
      */
     private int getIntValue(Map<String, Object> map, String key, int defaultValue)
     {
@@ -219,35 +263,16 @@ public class LogScanConfig
      * @param map the map to read from
      * @param key the key to look up
      * @param defaultValue the default value if not found
-     * @return the Integer value, or null
+     *
+     * @return The value from the map, or the default value.
      */
     private Integer getIntegerValue(Map<String, Object> map, String key, Integer defaultValue)
     {
         Object value = map.get(key);
-        if (value instanceof Number)
+        if (value instanceof Number num)
         {
-            return ((Number) value).intValue();
+            return num.intValue();
         }
         return defaultValue;
-    }
-
-    /**
-     * Gets the maximum number of lines to scan.
-     *
-     * @return the maximum lines (0 = unlimited)
-     */
-    public int getMaxLinesToScan()
-    {
-        return maxLinesToScan;
-    }
-
-    /**
-     * Gets the list of patterns to scan for.
-     *
-     * @return the list of scan patterns
-     */
-    public List<ScanPattern> getPatterns()
-    {
-        return patterns;
     }
 }

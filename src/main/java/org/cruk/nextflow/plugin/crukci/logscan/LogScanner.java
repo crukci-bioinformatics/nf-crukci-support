@@ -1,13 +1,14 @@
-package org.cruk.nextflow.plugin.logscan;
+package org.cruk.nextflow.plugin.crukci.logscan;
 
-import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.LineNumberReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 
+import org.cruk.nextflow.plugin.crukci.CRUKCIConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +31,7 @@ public class LogScanner
     /**
      * Configuration for this scanner.
      */
-    private final LogScanConfig config;
+    private final CRUKCIConfig config;
 
     /**
      * Represents a match found in a log file.
@@ -40,17 +41,17 @@ public class LogScanner
         /**
          * The pattern that matched.
          */
-        private final LogScanConfig.ScanPattern pattern;
+        public final CRUKCIConfig.ScanPattern pattern;
 
         /**
          * The line number where the match was found (1-based).
          */
-        private final int lineNumber;
+        public final int lineNumber;
 
         /**
          * The matched text.
          */
-        private final String matchedText;
+        public final String matchedText;
 
         /**
          * Constructs a new ScanMatch.
@@ -59,41 +60,11 @@ public class LogScanner
          * @param lineNumber the line number (1-based)
          * @param matchedText the matched text
          */
-        public ScanMatch(LogScanConfig.ScanPattern pattern, int lineNumber, String matchedText)
+        public ScanMatch(CRUKCIConfig.ScanPattern pattern, int lineNumber, String matchedText)
         {
             this.pattern = pattern;
             this.lineNumber = lineNumber;
             this.matchedText = matchedText;
-        }
-
-        /**
-         * Gets the pattern that matched.
-         *
-         * @return the scan pattern
-         */
-        public LogScanConfig.ScanPattern getPattern()
-        {
-            return pattern;
-        }
-
-        /**
-         * Gets the line number where the match was found.
-         *
-         * @return the line number (1-based)
-         */
-        public int getLineNumber()
-        {
-            return lineNumber;
-        }
-
-        /**
-         * Gets the matched text.
-         *
-         * @return the matched text
-         */
-        public String getMatchedText()
-        {
-            return matchedText;
         }
     }
 
@@ -102,7 +73,7 @@ public class LogScanner
      *
      * @param config the configuration to use
      */
-    public LogScanner(LogScanConfig config)
+    public LogScanner(CRUKCIConfig config)
     {
         this.config = config;
     }
@@ -126,34 +97,31 @@ public class LogScanner
 
         logger.debug("Scanning log file: {}", logFile);
 
-        int lineNumber = 0;
-        int maxLines = config.getMaxLinesToScan();
-
-        try (BufferedReader reader = Files.newBufferedReader(logFile))
+        try (LineNumberReader reader = new LineNumberReader(Files.newBufferedReader(logFile)))
         {
             String line;
             while ((line = reader.readLine()) != null)
             {
-                lineNumber++;
+                int lineNumber = reader.getLineNumber();
 
                 // Check if we've reached the maximum lines to scan
-                if (maxLines > 0 && lineNumber > maxLines)
+                if (config.maxLinesToScan > 0 && lineNumber > config.maxLinesToScan)
                 {
-                    logger.debug("Reached max lines to scan: {}", maxLines);
+                    logger.debug("Reached max lines to scan: {}", config.maxLinesToScan);
                     break;
                 }
 
                 // Check each pattern against this line
-                for (LogScanConfig.ScanPattern scanPattern : config.getPatterns())
+                for (CRUKCIConfig.ScanPattern scanPattern : config.patterns)
                 {
-                    Matcher matcher = scanPattern.getPattern().matcher(line);
+                    Matcher matcher = scanPattern.pattern.matcher(line);
                     if (matcher.find())
                     {
                         String matchedText = matcher.group();
                         matches.add(new ScanMatch(scanPattern, lineNumber, matchedText));
 
                         logger.debug("Pattern '{}' matched at line {}: {}",
-                            scanPattern.getName(), lineNumber, matchedText);
+                            scanPattern.name, lineNumber, matchedText);
                     }
                 }
             }

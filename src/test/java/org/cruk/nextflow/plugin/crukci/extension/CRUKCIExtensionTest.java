@@ -1,5 +1,9 @@
-package org.cruk.nextflow.plugin.extension;
+package org.cruk.nextflow.plugin.crukci.extension;
 
+import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.DEFAULT_JAVA_METASPACE;
+import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.DEFAULT_JAVA_OVERHEAD;
+import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.MINIMUM_JAVA_METASPACE;
+import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.MINIMUM_JAVA_OVERHEAD;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -8,7 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.when;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
@@ -18,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.cruk.nextflow.plugin.crukci.CRUKCIConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,7 +46,12 @@ class CRUKCIExtensionTest
     @Mock
     private ScriptBinding binding;
 
+    private Map<String, Object> config;
+    private Map<String, Object> crukciConfig;
+
     private CRUKCIExtension extension;
+
+    CRUKCIExtensionTest() { }
 
     /**
      * Set up the test fixture before each test.
@@ -58,6 +67,12 @@ class CRUKCIExtensionTest
         lenient().when(session.getBinding()).thenReturn(binding);
         lenient().when(binding.getParams()).thenReturn(params);
 
+        config = new HashMap<>();
+        crukciConfig = new HashMap<>();
+        config.put("crukci", crukciConfig);
+
+        lenient().when(session.getConfig()).thenReturn(config);
+
         extension.init(session);
     }
 
@@ -70,9 +85,9 @@ class CRUKCIExtensionTest
         TaskConfig task = new TaskConfig();
         task.put("memory", "512MB");
 
-        Object result = extension.javaMemMB(task);
+        Number result = (Number)extension.javaMemMB(task);
 
-        assertEquals(384L, ((Number) result).longValue()); // 512 - 128 overhead
+        assertEquals(384L, result.longValue()); // 512 - 128 overhead
     }
 
     /**
@@ -84,9 +99,9 @@ class CRUKCIExtensionTest
         TaskConfig task = new TaskConfig();
         task.put("memory", "144MB"); // 128 overhead + 16 minimum heap
 
-        Object result = extension.javaMemMB(task);
+        Number result = (Number)extension.javaMemMB(task);
 
-        assertEquals(16L, ((Number) result).longValue());
+        assertEquals(16L, result.longValue());
     }
 
     /**
@@ -120,14 +135,16 @@ class CRUKCIExtensionTest
 
         assertNotNull(result);
 
+        final long heap = 1024L - DEFAULT_JAVA_METASPACE - DEFAULT_JAVA_OVERHEAD;
+
         // Access Expando properties using reflection
         Map<String, Object> props = getExpandoProperties(result);
 
-        assertEquals(832L, ((Number) props.get("heap")).longValue()); // 1024 - 128 meta - 64 overhead
-        assertEquals(128L, ((Number) props.get("metaSpace")).longValue());
-        assertEquals(64L, ((Number) props.get("misc")).longValue());
+        assertEquals(heap, ((Number) props.get("heap")).longValue()); // 1024 - 128 meta - 64 overhead
+        assertEquals(CRUKCIConfig.DEFAULT_JAVA_METASPACE, ((Number) props.get("metaSpace")).intValue());
+        assertEquals(CRUKCIConfig.DEFAULT_JAVA_OVERHEAD, ((Number) props.get("misc")).intValue());
         assertEquals(1024L, ((Number) props.get("all")).longValue());
-        assertEquals("-XX:MaxMetaspaceSize=128m -Xms832m -Xmx832m", props.get("jvmOpts").toString());
+        assertEquals("-XX:MaxMetaspaceSize=" + CRUKCIConfig.DEFAULT_JAVA_METASPACE + "m -Xms" + heap + "m -Xmx" + heap +"m", props.get("jvmOpts").toString());
     }
 
     /**
@@ -136,11 +153,8 @@ class CRUKCIExtensionTest
     @Test
     void testJavaMemoryOptions_CustomParameters()
     {
-        // Set custom parameters
-        ScriptBinding.ParamsMap params = new ScriptBinding.ParamsMap();
-        params.put("java_overhead_size", 100);
-        params.put("java_metaspace_size", 256);
-        when(session.getParams()).thenReturn(params);
+        crukciConfig.put("javaOverhead", 100);
+        crukciConfig.put("javaMetaspace", 256);
 
         TaskConfig task = new TaskConfig();
         task.put("memory", "2048MB");
@@ -148,38 +162,15 @@ class CRUKCIExtensionTest
 
         Object result = extension.javaMemoryOptions(task);
 
-        Map<String, Object> props = getExpandoProperties(result);
-
-        assertEquals(1692L, ((Number) props.get("heap")).longValue()); // 2048 - 256 meta - 100 overhead
-        assertEquals(256L, ((Number) props.get("metaSpace")).longValue());
-        assertEquals(100L, ((Number) props.get("misc")).longValue());
-        assertEquals(2048L, ((Number) props.get("all")).longValue());
-        assertEquals("-XX:MaxMetaspaceSize=256m -Xms1692m -Xmx1692m", props.get("jvmOpts").toString());
-    }
-
-    /**
-     * Test javaMemoryOptions with retry attempts scaling.
-     */
-    @Test
-    void testJavaMemoryOptions_WithRetryAttempt()
-    {
-        ScriptBinding.ParamsMap params = new ScriptBinding.ParamsMap();
-        params.put("java_overhead_size", 64);
-        params.put("java_metaspace_size", 128);
-        when(session.getParams()).thenReturn(params);
-
-        TaskConfig task = new TaskConfig();
-        task.put("memory", "4096MB");
-        task.put("attempt", 2); // Second attempt
-
-        Object result = extension.javaMemoryOptions(task);
+        final long heap = 2048L - 100 - 256;
 
         Map<String, Object> props = getExpandoProperties(result);
 
-        // overhead and metaspace should be multiplied by attempt
-        assertEquals(3712L, ((Number) props.get("heap")).longValue()); // 4096 - (256 meta * 2) - (64 overhead * 2)
-        assertEquals(256L, ((Number) props.get("metaSpace")).longValue()); // 128 * 2
-        assertEquals(128L, ((Number) props.get("misc")).longValue()); // 64 * 2
+        assertEquals(heap, ((Number) props.get("heap")).longValue()); // 2048 - 256 meta - 100 overhead
+        assertEquals(256L, ((Number) props.get("metaSpace")).intValue());
+        assertEquals(100L, ((Number) props.get("misc")).intValue());
+        assertEquals(2048L, ((Number) props.get("all")).intValue());
+        assertEquals("-XX:MaxMetaspaceSize=256m -Xms" + heap + "m -Xmx" + heap + "m", props.get("jvmOpts").toString());
     }
 
     /**
@@ -188,10 +179,8 @@ class CRUKCIExtensionTest
     @Test
     void testJavaMemoryOptions_ParametersBelowMinimum()
     {
-        ScriptBinding.ParamsMap params = new ScriptBinding.ParamsMap();
-        params.put("java_overhead_size", 10); // Below minimum of 32
-        params.put("java_metaspace_size", 32); // Below minimum of 64
-        when(session.getParams()).thenReturn(params);
+        crukciConfig.put("javaOverhead", 8);
+        crukciConfig.put("javaMetaspace", 8);
 
         TaskConfig task = new TaskConfig();
         task.put("memory", "1024MB");
@@ -199,12 +188,16 @@ class CRUKCIExtensionTest
 
         Object result = extension.javaMemoryOptions(task);
 
+        final long heap = 1024L - MINIMUM_JAVA_METASPACE - MINIMUM_JAVA_OVERHEAD;
+
         Map<String, Object> props = getExpandoProperties(result);
 
         // Should be clamped to minimum values
-        assertEquals(928L, ((Number) props.get("heap")).longValue()); // 1024 - 64 meta - 32 overhead
-        assertEquals(64L, ((Number) props.get("metaSpace")).longValue()); // Clamped to minimum
-        assertEquals(32L, ((Number) props.get("misc")).longValue()); // Clamped to minimum
+        assertEquals(heap, ((Number) props.get("heap")).longValue()); // 1024 - 64 meta - 32 overhead
+        assertEquals(MINIMUM_JAVA_METASPACE, ((Number) props.get("metaSpace")).intValue()); // Clamped to minimum
+        assertEquals(MINIMUM_JAVA_OVERHEAD, ((Number) props.get("misc")).intValue()); // Clamped to minimum
+
+        assertEquals("-XX:MaxMetaspaceSize=" + MINIMUM_JAVA_METASPACE + "m -Xms" + heap + "m -Xmx" + heap + "m", props.get("jvmOpts").toString());
     }
 
     /**
