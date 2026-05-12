@@ -1,2 +1,2 @@
-org.cruk.nextflow.plugin.logscan.LogScanObserverFactory
-org.cruk.nextflow.plugin.extension.CRUKCIExtension
+org.cruk.nextflow.plugin.crukci.logscan.LogScanObserverFactory
+org.cruk.nextflow.plugin.crukci.extension.CRUKCIExtension

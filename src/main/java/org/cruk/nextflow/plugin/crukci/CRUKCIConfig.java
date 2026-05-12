@@ -56,7 +56,7 @@ public class CRUKCIConfig
     /**
      * Logger instance for this class.
      */
-    private static Logger logger = LoggerFactory.getLogger(CRUKCIConfig.class);
+    private static final Logger logger = LoggerFactory.getLogger(CRUKCIConfig.class);
 
     /**
      * Flag to prevent the user getting messages about too small memory allocations
