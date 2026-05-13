@@ -13,7 +13,9 @@ plugins {
     id 'nf-crukci-support@<version>'
 }
 
-logScan {
+crukci {
+    javaOverhead = 256        // Default 64, minimum 32
+    javaMetaspace = 512       // Default 128, minimum 64
     maxLinesToScan = 10000    // 0 = unlimited
 
     patterns = [
