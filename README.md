@@ -96,6 +96,12 @@ Follow these steps to publish the plugin to the Nextflow Plugin Registry:
 
 Developed at the Cancer Research UK Cambridge Institute.
 
+## Nextflow Documentation Links
+
+1. https://docs.seqera.io/nextflow/plugins/developing-plugins - Writing plugins
+2. https://docs.seqera.io/nextflow/guides/gradle-plugin - Gradle plugin
+3. https://docs.seqera.io/nextflow/guides/migrate-plugin - Plugin registry
+
 ## Authors
 
 Richard Bowers (richard.bowers@cruk.cam.ac.uk)
