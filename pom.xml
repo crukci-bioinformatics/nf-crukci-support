@@ -131,7 +131,7 @@
                                 <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                             </manifest>
                             <manifestEntries>
-                                <Plugin-Class>org.cruk.nextflow.plugin.logscan.LogScanPlugin</Plugin-Class>
+                                <Plugin-Class>org.cruk.nextflow.plugin.crukci.logscan.LogScanPlugin</Plugin-Class>
                                 <Plugin-Id>nf-crukci-support</Plugin-Id>
                                 <Plugin-Version>${project.version}</Plugin-Version>
                                 <Plugin-Requires><![CDATA[>=25.04.0]]></Plugin-Requires>

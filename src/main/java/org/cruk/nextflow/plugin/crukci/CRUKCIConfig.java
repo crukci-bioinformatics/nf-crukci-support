@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import nextflow.Session;
+import nextflow.util.MemoryUnit;
 
 /**
  * Configuration holder for the CRUK-CI plugin.
@@ -31,7 +32,7 @@ public class CRUKCIConfig
     /**
      * The default margin for JVM overheads.
      */
-    public static final int DEFAULT_JAVA_OVERHEAD = 64;
+    public static final String DEFAULT_JAVA_OVERHEAD = "64M";
 
     /**
      * The smallest allowed meta space size (class definitions etc).
@@ -41,7 +42,7 @@ public class CRUKCIConfig
     /**
      * The default meta space size.
      */
-    public static final int DEFAULT_JAVA_METASPACE = 128;
+    public static final String DEFAULT_JAVA_METASPACE = "128M";
 
     /**
      * The smallest allowed Java heap size to be functional.
@@ -65,14 +66,14 @@ public class CRUKCIConfig
     private static boolean limitsWarned = false;
 
     /**
-     * Size in megabytes for the JVM overhead.
+     * Memory reserved for the JVM overhead.
      */
-    public final int javaOverhead;
+    public final MemoryUnit javaOverhead;
 
     /**
-     * Size in megabytes for the JVM metaspace overhead.
+     * Memory reserved for the JVM metaspace overhead.
      */
-    public final int javaMetaspace;
+    public final MemoryUnit javaMetaspace;
 
     /**
      * Maximum number of lines to scan (0 &lt;= is unlimited).
@@ -136,25 +137,25 @@ public class CRUKCIConfig
             configMap = map;
         }
 
-        int overhead = getIntValue(configMap, "javaOverhead", DEFAULT_JAVA_OVERHEAD);
-        if (overhead < MINIMUM_JAVA_OVERHEAD)
+        MemoryUnit overhead = MemoryUnit.of(configMap.getOrDefault("javaOverhead", DEFAULT_JAVA_OVERHEAD).toString());
+        if (overhead.toMega() < MINIMUM_JAVA_OVERHEAD)
         {
             if (!limitsWarned)
             {
                 logger.warn("javaOverhead is set to {}, which is too small. Setting to the minimum of {}MB.", overhead, MINIMUM_JAVA_OVERHEAD);
             }
-            overhead = MINIMUM_JAVA_OVERHEAD;
+            overhead = MemoryUnit.of(MINIMUM_JAVA_OVERHEAD << 20);
         }
         this.javaOverhead = overhead;
 
-        int metaspace = getIntValue(configMap, "javaMetaspace", DEFAULT_JAVA_METASPACE);
-        if (metaspace < MINIMUM_JAVA_METASPACE)
+        MemoryUnit metaspace = MemoryUnit.of(configMap.getOrDefault("javaMetaspace", DEFAULT_JAVA_METASPACE).toString());
+        if (metaspace.toMega() < MINIMUM_JAVA_METASPACE)
         {
             if (!limitsWarned)
             {
                 logger.warn("javaMetaspace is set to {}, which is too small. Setting to the minimum of {}MB.", metaspace, MINIMUM_JAVA_METASPACE);
             }
-            metaspace = MINIMUM_JAVA_METASPACE;
+            metaspace = MemoryUnit.of(MINIMUM_JAVA_METASPACE << 20);
         }
         this.javaMetaspace = metaspace;
 

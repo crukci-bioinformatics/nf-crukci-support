@@ -1,7 +1,5 @@
 package org.cruk.nextflow.plugin.crukci;
 
-import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.DEFAULT_JAVA_METASPACE;
-import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.DEFAULT_JAVA_OVERHEAD;
 import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.DEFAULT_LINES_TO_SCAN;
 import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.MINIMUM_JAVA_METASPACE;
 import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.MINIMUM_JAVA_OVERHEAD;
@@ -19,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import nextflow.Session;
+import nextflow.util.MemoryUnit;
 
 /**
  * Tests for CRUKCIConfig.
@@ -26,6 +25,9 @@ import nextflow.Session;
 @ExtendWith(MockitoExtension.class)
 class CRUKCIConfigTest
 {
+    static final MemoryUnit DEFAULT_JAVA_OVERHEAD = MemoryUnit.of(CRUKCIConfig.DEFAULT_JAVA_OVERHEAD);
+    static final MemoryUnit DEFAULT_JAVA_METASPACE = MemoryUnit.of(CRUKCIConfig.DEFAULT_JAVA_METASPACE);
+
     @Mock
     Session session;
 
@@ -74,8 +76,8 @@ class CRUKCIConfigTest
     void testCustomConfig()
     {
         Map<String, Object> configMap = Map.of(
-            "javaOverhead", 256,
-            "javaMetaspace", 512,
+            "javaOverhead", "256M",
+            "javaMetaspace", "512M",
             "maxLinesToScan", 5000
         );
 
@@ -84,8 +86,8 @@ class CRUKCIConfigTest
         CRUKCIConfig config = new CRUKCIConfig(session);
 
         assertEquals(5000, config.maxLinesToScan);
-        assertEquals(256, config.javaOverhead);
-        assertEquals(512, config.javaMetaspace);
+        assertEquals(256, config.javaOverhead.toMega());
+        assertEquals(512, config.javaMetaspace.toMega());
     }
 
     /**
@@ -103,8 +105,8 @@ class CRUKCIConfigTest
 
         CRUKCIConfig config = new CRUKCIConfig(session);
 
-        assertEquals(MINIMUM_JAVA_OVERHEAD, config.javaOverhead);
-        assertEquals(MINIMUM_JAVA_METASPACE, config.javaMetaspace);
+        assertEquals(MINIMUM_JAVA_OVERHEAD, config.javaOverhead.toMega());
+        assertEquals(MINIMUM_JAVA_METASPACE, config.javaMetaspace.toMega());
     }
 
     /**

@@ -38,26 +38,18 @@ class CRUKCIExtension extends PluginExtensionPoint
 
     /**
      * Give a number for the Java heap size based on the task memory, allowing for
-     * some overhead for the JVM itself from the total allowed. The current overhead
-     * is 128 MB.
+     * some overhead for the JVM itself (metaspace and other) from the total allowed.
      *
      * @param task The task object containing memory allocation information.
+     *
      * @return The calculated Java heap size in megabytes.
+     *
      * @throws Exception If insufficient memory is available after overhead.
      */
     @Function
     def javaMemMB(TaskConfig task)
     {
-        def overhead = 128
-        def minimumHeap = 16
-
-        def javaMem = task.memory.mega - overhead
-
-        if (javaMem < minimumHeap)
-        {
-            throw new Exception("No memory after taking JVM overhead. Need at least ${overhead + minimumHeap} MB allocated.")
-        }
-        return javaMem
+        return javaMemoryOptions(task).heap
     }
 
     /**
@@ -69,14 +61,18 @@ class CRUKCIExtension extends PluginExtensionPoint
      * What's left of the task's memory after allocating the meta
      * space size plus the miscellaneous overhead is allocated for the JVM's heap.
      *
+     * <p>
      * Returns an object with numerous fields (all numbers are megabytes):
-     * "heap" - The heap size.
-     * "metaSpace" - The meta space size.
-     * "misc" - The additional overhead taken for everything else.
-     * "all" - The task's allocated memory. Same as task.memory.toMega()
-     * "jvmOpts" - The string to include in the Java command line for the program
+     * <ol>
+     * <li>"heap" - The heap size.</li>
+     * <li>"metaSpace" - The meta space size.</li>
+     * <li>"misc" - The additional overhead taken for everything else.</li>
+     * <li>"all" - The task's allocated memory. Same as task.memory.toMega().</li>
+     * <li>"jvmOpts" - The string to include in the Java command line for the program
      * to set the memory values as calculated. This string must not be quoted in
-     * the shell script.
+     * the shell script.</li>
+     * </ol>
+     * </p>
      *
      * @param task The task object containing memory allocation information.
      * @return An Expando object with heap, metaSpace, misc, all, and jvmOpts fields.
@@ -89,22 +85,22 @@ class CRUKCIExtension extends PluginExtensionPoint
 
         final def crukciConfig = new CRUKCIConfig(session)
 
-        final long heap = taskAllocation - crukciConfig.javaOverhead - crukciConfig.javaMetaspace
+        final long heap = taskAllocation - crukciConfig.javaOverhead.mega - crukciConfig.javaMetaspace.mega
 
         if (heap < CRUKCIConfig.MINIMUM_JAVA_HEAP)
         {
-            logger.error("Task {} attempt {}: allocated {}MB; JVM overhead {}MB; Java Meta Space {}MB.",
+            logger.error("Task {} attempt {}: allocated {}MB; JVM overhead {}; Java Meta Space {}.",
                          task.name,task.attempt, taskAllocation, crukciConfig.javaOverhead, crukciConfig.javaMetaspace)
-            def requiredMin = crukciConfig.javaOverhead + crukciConfig.javaMetaspace + CRUKCIConfig.MINIMUM_JAVA_HEAP
+            def requiredMin = crukciConfig.javaOverhead.mega + crukciConfig.javaMetaspace.mega + CRUKCIConfig.MINIMUM_JAVA_HEAP
             throw new Exception("No memory left after taking JVM overheads. Need at least ${requiredMin} MB allocated.")
         }
 
         def info = new Expando()
         info.heap = heap
-        info.metaSpace = crukciConfig.javaMetaspace
-        info.misc = crukciConfig.javaOverhead
+        info.metaSpace = crukciConfig.javaMetaspace.mega
+        info.misc = crukciConfig.javaOverhead.mega
         info.all = taskAllocation
-        info.jvmOpts = "-XX:MaxMetaspaceSize=${crukciConfig.javaMetaspace}m -Xms${heap}m -Xmx${heap}m"
+        info.jvmOpts = "-XX:MaxMetaspaceSize=${crukciConfig.javaMetaspace.mega}m -Xms${heap}m -Xmx${heap}m"
 
         return info
     }

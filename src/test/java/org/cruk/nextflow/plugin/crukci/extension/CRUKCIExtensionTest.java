@@ -1,9 +1,8 @@
 package org.cruk.nextflow.plugin.crukci.extension;
 
-import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.DEFAULT_JAVA_METASPACE;
-import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.DEFAULT_JAVA_OVERHEAD;
 import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.MINIMUM_JAVA_METASPACE;
 import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.MINIMUM_JAVA_OVERHEAD;
+import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.MINIMUM_JAVA_HEAP;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -31,6 +30,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import nextflow.Session;
 import nextflow.processor.TaskConfig;
 import nextflow.script.ScriptBinding;
+import nextflow.util.MemoryUnit;
 
 /**
  * Unit tests for CRUKCIExtension.
@@ -40,6 +40,9 @@ import nextflow.script.ScriptBinding;
 @ExtendWith(MockitoExtension.class)
 class CRUKCIExtensionTest
 {
+    static final MemoryUnit DEFAULT_JAVA_OVERHEAD = MemoryUnit.of(CRUKCIConfig.DEFAULT_JAVA_OVERHEAD);
+    static final MemoryUnit DEFAULT_JAVA_METASPACE = MemoryUnit.of(CRUKCIConfig.DEFAULT_JAVA_METASPACE);
+
     @Mock
     private Session session;
 
@@ -87,7 +90,7 @@ class CRUKCIExtensionTest
 
         Number result = (Number)extension.javaMemMB(task);
 
-        assertEquals(384L, result.longValue()); // 512 - 128 overhead
+        assertEquals(320L, result.longValue()); // 512 - 128 metaspace - 64 overhead
     }
 
     /**
@@ -96,8 +99,13 @@ class CRUKCIExtensionTest
     @Test
     void testJavaMemMB_MinimumMemory()
     {
+        final long min = MINIMUM_JAVA_OVERHEAD + MINIMUM_JAVA_METASPACE + MINIMUM_JAVA_HEAP;
+
+        crukciConfig.put("javaOverhead", MINIMUM_JAVA_OVERHEAD + "M");
+        crukciConfig.put("javaMetaspace", MINIMUM_JAVA_METASPACE + "M");
+
         TaskConfig task = new TaskConfig();
-        task.put("memory", "144MB"); // 128 overhead + 16 minimum heap
+        task.put("memory", min + "MB");
 
         Number result = (Number)extension.javaMemMB(task);
 
@@ -110,15 +118,20 @@ class CRUKCIExtensionTest
     @Test
     void testJavaMemMB_InsufficientMemory()
     {
+        final long min = MINIMUM_JAVA_OVERHEAD + MINIMUM_JAVA_METASPACE + MINIMUM_JAVA_HEAP;
+
+        crukciConfig.put("javaOverhead", MINIMUM_JAVA_OVERHEAD + "M");
+        crukciConfig.put("javaMetaspace", MINIMUM_JAVA_METASPACE + "M");
+
         TaskConfig task = new TaskConfig();
-        task.put("memory", "100MB"); // Less than 144MB minimum
+        task.put("memory", (min - 32) + "MB"); // Less than minimum
 
         Exception exception = assertThrows(Exception.class, () -> {
             extension.javaMemMB(task);
         });
 
-        assertTrue(exception.getMessage().contains("No memory after taking JVM overhead"));
-        assertTrue(exception.getMessage().contains("144 MB"));
+        assertTrue(exception.getMessage().contains("No memory left after taking JVM overheads."));
+        assertTrue(exception.getMessage().contains(min + " MB"));
     }
 
     /**
@@ -135,16 +148,16 @@ class CRUKCIExtensionTest
 
         assertNotNull(result);
 
-        final long heap = 1024L - DEFAULT_JAVA_METASPACE - DEFAULT_JAVA_OVERHEAD;
+        final long heap = 1024L - DEFAULT_JAVA_METASPACE.toMega() - DEFAULT_JAVA_OVERHEAD.toMega();
 
         // Access Expando properties using reflection
         Map<String, Object> props = getExpandoProperties(result);
 
         assertEquals(heap, ((Number) props.get("heap")).longValue()); // 1024 - 128 meta - 64 overhead
-        assertEquals(CRUKCIConfig.DEFAULT_JAVA_METASPACE, ((Number) props.get("metaSpace")).intValue());
-        assertEquals(CRUKCIConfig.DEFAULT_JAVA_OVERHEAD, ((Number) props.get("misc")).intValue());
-        assertEquals(1024L, ((Number) props.get("all")).longValue());
-        assertEquals("-XX:MaxMetaspaceSize=" + CRUKCIConfig.DEFAULT_JAVA_METASPACE + "m -Xms" + heap + "m -Xmx" + heap +"m", props.get("jvmOpts").toString());
+        assertEquals(DEFAULT_JAVA_METASPACE.toMega(), (Long)props.get("metaSpace"));
+        assertEquals(DEFAULT_JAVA_OVERHEAD.toMega(), (Long)props.get("misc"));
+        assertEquals(1024L, (Long)props.get("all"));
+        assertEquals("-XX:MaxMetaspaceSize=" + DEFAULT_JAVA_METASPACE.toMega() + "m -Xms" + heap + "m -Xmx" + heap +"m", props.get("jvmOpts").toString());
     }
 
     /**
@@ -153,8 +166,8 @@ class CRUKCIExtensionTest
     @Test
     void testJavaMemoryOptions_CustomParameters()
     {
-        crukciConfig.put("javaOverhead", 100);
-        crukciConfig.put("javaMetaspace", 256);
+        crukciConfig.put("javaOverhead", "100M");
+        crukciConfig.put("javaMetaspace", "256M");
 
         TaskConfig task = new TaskConfig();
         task.put("memory", "2048MB");
@@ -179,8 +192,8 @@ class CRUKCIExtensionTest
     @Test
     void testJavaMemoryOptions_ParametersBelowMinimum()
     {
-        crukciConfig.put("javaOverhead", 8);
-        crukciConfig.put("javaMetaspace", 8);
+        crukciConfig.put("javaOverhead", "8M");
+        crukciConfig.put("javaMetaspace", "8M");
 
         TaskConfig task = new TaskConfig();
         task.put("memory", "1024MB");
