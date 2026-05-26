@@ -49,9 +49,9 @@ mvn clean package
 The resulting JAR can be installed manually:
 
 ```bash
-mkdir -p ~/.nextflow/plugins/nf-crukci-support-1.1-SNAPSHOT
-cp target/nf-crukci-support-1.1-SNAPSHOT.jar \
-    ~/.nextflow/plugins/nf-crukci-support-1.1-SNAPSHOT/
+mkdir -p ~/.nextflow/plugins/nf-crukci-support-1.1.0
+cp target/nf-crukci-support-1.1.0.jar \
+    ~/.nextflow/plugins/nf-crukci-support-1.1.0/
 ```
 
 ### Enabling the Plugin
@@ -60,7 +60,7 @@ Add the plugin to your `nextflow.config`:
 
 ```groovy
 plugins {
-    id 'nf-crukci-support@1.1-SNAPSHOT'
+    id 'nf-crukci-support@1.1.0'
 }
 ```
 
@@ -133,7 +133,7 @@ patterns = [
 
 ```groovy
 plugins {
-    id 'nf-crukci-support@1.1-SNAPSHOT'
+    id 'nf-crukci-support@1.1.0'
 }
 
 crukci {
@@ -321,7 +321,7 @@ try {
 
 ```groovy
 plugins {
-    id 'nf-crukci-support@1.1-SNAPSHOT'
+    id 'nf-crukci-support@1.1.0'
 }
 
 // crukci { } block not required - default patterns cover the common cases
