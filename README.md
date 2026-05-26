@@ -1,74 +1,401 @@
 # nf-crukci-support
 
-A Nextflow plugin that proactively monitors task log files and handles external task terminations.
-It also provides some functions used throughout the CRUK-CI pipelines.
+A Nextflow plugin developed at the Cancer Research UK Cambridge Institute that
+proactively monitors task log files during workflow execution and provides
+utility functions for pipeline authors.
 
-## Features
+## Summary
 
-- **Proactive monitoring**: Background TaskMonitor thread detects tasks killed externally (SLURM OOM, GPU limits, etc.)
-- Scans task log files while tasks are running
-- Configurable regex patterns with case-sensitive/insensitive matching
-- **Exit code override**: Set custom exit codes when patterns match to trigger Nextflow errorStrategy
-- Automatic detection of "memory limit" patterns with exit code 137
-- Configurable maximum lines to scan
-- Six supporting functions.
+The plugin has two main areas of functionality:
 
-The log scanning functionality is documented in [LogScan.md](docs/LogScan.md). The extension functions
-are documented in [Functions.md](docs/Functions.md).
+**Log scanning**: A background thread monitors running tasks and scans their
+`.command.log` files for configurable regex patterns. When a pattern with an
+associated exit code is matched, the plugin writes a `.exitcode` file before
+Nextflow times out waiting for one. This is particularly useful for tasks killed
+by external resource managers such as SLURM's OOM killer, where the scheduler
+terminates the process without leaving an exit code for Nextflow to read.
 
-## Installation
+**Extension functions**: Six utility functions available for use in pipeline
+scripts, covering Java heap calculation, collection handling, filename
+sanitisation and exception logging.
 
-1. Build the plugin:
+## Get Started
+
+### Requirements
+
+- Nextflow 25.04.0 or newer
+- Java 17
+
+### Installing the Plugin
+
+This plugin is not listed in the Nextflow main plugin registry. To allow
+Nextflow to download it automatically, set the `NXF_PLUGINS_TEST_REPOSITORY`
+environment variable to include the CRUK-CI plugin index alongside the
+standard one:
+
 ```bash
+export NXF_PLUGINS_TEST_REPOSITORY="https://github.com/crukci-bioinformatics/nextflow-plugins/raw/refs/heads/master/plugins.json,https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json"
+```
+
+Add this to your `.bashrc` so it is set for every session.
+
+### Building from Source
+
+```bash
+cd nf-crukci-support
 mvn clean package
 ```
 
-2. Install to Nextflow plugins directory:
+The resulting JAR can be installed manually:
+
 ```bash
-mkdir -p ~/.nextflow/plugins/nf-crukci-support-1.0-SNAPSHOT
-cp target/nf-crukci-support-1.0-SNAPSHOT.jar ~/.nextflow/plugins/nf-crukci-support-1.0-SNAPSHOT/
+mkdir -p ~/.nextflow/plugins/nf-crukci-support-1.1-SNAPSHOT
+cp target/nf-crukci-support-1.1-SNAPSHOT.jar \
+    ~/.nextflow/plugins/nf-crukci-support-1.1-SNAPSHOT/
 ```
 
-## Configuration
+### Enabling the Plugin
 
 Add the plugin to your `nextflow.config`:
 
 ```groovy
 plugins {
-    id 'nf-crukci-support@<version>'
+    id 'nf-crukci-support@1.1-SNAPSHOT'
 }
 ```
 
-Further configuration can be read in [LogScan.md](docs/LogScan.md).
+Once declared the log-scanning observer starts automatically. No further
+configuration is required to get the default behaviour.
 
-### Getting the Plugin
+## Log Scanning
 
-At present this plugin is not part of the set of Nextflow plugins globally available. The only way to have the Nextflow automatically download the
-plugin for you is to set the `NXF_PLUGINS_TEST_REPOSITORY` environment variable to include our own `plugins.json`.
+The plugin runs a daemon thread that monitors all submitted tasks independently
+of the Nextflow executor.
 
-```BASH
-export NXF_PLUGINS_TEST_REPOSITORY="https://github.com/crukci-bioinformatics/nextflow-plugins/raw/refs/heads/master/plugins.json,https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json"
+### How it works
+
+Every five seconds the monitor checks each registered task work directory. When it
+finds a `.command.log` that has been stable (no modification) for at least two
+seconds, but no `.exitcode` file, it scans the log for configured patterns. If
+a matching pattern has a non-null exit code the monitor writes that value to
+`.exitcode`, giving Nextflow a valid exit status to read instead of timing out
+with a "task terminated by external system" error.
+
+### Default patterns
+
+If no `patterns` are configured in `nextflow.config` the plugin always
+applies these two patterns:
+
+| Pattern | Name | Exit code |
+|---------|------|-----------|
+| `Exceeded job memory limit` | Memory Limit Exceeded | 137 |
+| `java.lang.OutOfMemoryError` | Java Heap Exhausted | 137 |
+
+These two patterns are also appended to the end of any user-supplied list, so
+they are always active.
+
+### Configuration
+
+All settings go inside a `crukci { }` block in `nextflow.config`.
+
+| Setting | Default | Minimum | Description |
+|---------|---------|---------|-------------|
+| `javaOverhead` | `64M` | `32M` | Memory reserved for JVM misc overhead (JNI, ByteBuffers, etc.) used by `javaMemoryOptions` |
+| `javaMetaspace` | `128M` | `64M` | Memory reserved for JVM metaspace used by `javaMemoryOptions` |
+| `maxLinesToScan` | `10000` | - | Maximum lines to read per log file. Set to `0` for unlimited. |
+| `patterns` | (none) | - | List of patterns to scan for (see below) |
+
+#### Pattern specification
+
+Patterns can be plain strings or maps.
+
+**Plain string** - the string is compiled as a case-sensitive regex. Patterns
+whose text contains `"memory limit"` automatically receive exit code 137.
+
+```groovy
+patterns = ['Exceeded job memory limit', 'CUDA out of memory']
 ```
 
-Probably best put this into your `.bashrc`. If we put this plugin into the Nextflow main plugins file this will no longer be required, but we need
-to be sure it works properly before approaching the Nextflow people.
+**Map** - provides full control over each pattern:
 
-## Requirements
+```groovy
+patterns = [
+    [
+        pattern: 'Out of memory',   // Required - compiled as a regex
+        name: 'OOM',                // Optional - display name for log messages
+        caseSensitive: false,       // Optional - default is true
+        exitCode: 137               // Optional - null means no exit code override
+    ]
+]
+```
 
-- Nextflow 25.04.0 or newer (tested with 25.04.4)
-- Java 17
+### Full configuration example
 
-**Note**: While this plugin is built with Java 17, it does not use the Java Platform Module System (JPMS) because Nextflow itself is not modular. The plugin uses the traditional classpath mechanism for compatibility.
+```groovy
+plugins {
+    id 'nf-crukci-support@1.1-SNAPSHOT'
+}
 
-## Building
+crukci {
+    javaOverhead    = '128M'   // Reserve 128 MB for JVM misc overhead
+    javaMetaspace   = '256M'   // Reserve 256 MB for JVM metaspace
+    maxLinesToScan  = 5000     // Only scan the first 5000 lines
+
+    patterns = [
+        // Plain string - exit code set automatically because text contains "memory limit"
+        'Exceeded job memory limit',
+
+        // Map patterns
+        [
+            pattern: 'CUDA out of memory',
+            name: 'GPU Memory Error',
+            caseSensitive: true,
+            exitCode: 140
+        ],
+        [
+            pattern: 'error',
+            name: 'Generic Error',
+            caseSensitive: false,
+            exitCode: null          // Detected and logged but exit code not overridden
+        ]
+    ]
+}
+```
+
+### Using exit codes in process definitions
+
+```groovy
+process myProcess {
+    errorStrategy { task.exitStatus == 137 ? 'retry' : 'terminate' }
+    maxRetries 3
+    memory { task.exitStatus == 137 ? (4.GB * task.attempt) : 4.GB }
+
+    script:
+    """
+    your_command_here
+    """
+}
+```
+
+## Extension Functions
+
+Six utility functions are provided as Nextflow plugin extension functions.
+Include only the ones you need:
+
+```groovy
+include { javaMemMB; javaMemoryOptions; sizeOf; makeCollection; safeName; logException } \
+    from 'plugin/nf-crukci-support'
+```
+
+### javaMemMB(task)
+
+Returns the Java heap size in megabytes for a task, after reserving memory for
+JVM metaspace and miscellaneous overhead. The overhead sizes are controlled by
+`crukci.javaMetaspace` and `crukci.javaOverhead` in `nextflow.config`.
+
+Throws an exception if the task's memory allocation is too small to leave at
+least 16 MB for the heap.
+
+```groovy
+process runJavaTool {
+    memory '2 GB'
+
+    script:
+    def heapMB = javaMemMB(task)
+    """
+    java -Xmx${heapMB}m -jar myapp.jar
+    """
+}
+```
+
+### javaMemoryOptions(task)
+
+Returns an object with full JVM memory settings derived from the task's memory
+allocation. The `jvmOpts` field is ready to paste directly into a Java command
+line without quoting.
+
+**Return fields** (all sizes in MB):
+
+| Field | Description |
+|-------|-------------|
+| `heap` | Java heap size |
+| `metaSpace` | Metaspace size |
+| `misc` | Miscellaneous overhead |
+| `all` | Total task memory (`task.memory.toMega()`) |
+| `jvmOpts` | JVM option string: `-XX:MaxMetaspaceSize=…m -Xms…m -Xmx…m` |
+
+```groovy
+process runJavaTool {
+    memory '4 GB'
+
+    script:
+    def mem = javaMemoryOptions(task)
+    """
+    java ${mem.jvmOpts} -jar myapp.jar
+    """
+}
+```
+
+Override the default overhead sizes in `nextflow.config`:
+
+```groovy
+crukci {
+    javaMetaspace = '256M'
+    javaOverhead  = '128M'
+}
+```
+
+### sizeOf(thing)
+
+Returns the number of elements in a collection or map, `1` for any other
+non-null object, and `0` for `null`. Useful when Nextflow may return either a
+single value or a list from a channel.
+
+```groovy
+sizeOf([1, 2, 3])      // 3
+sizeOf('hello')        // 1
+sizeOf(null)           // 0
+sizeOf([a: 1, b: 2])   // 2
+```
+
+> **Note**: Nextflow >= 23.9 introduced the `arity` attribute on `file`/`path`
+> and the `files()` function as first-class alternatives. `sizeOf` remains
+> available for pipelines that predate those features.
+
+### makeCollection(thingOrList)
+
+Wraps a single value in a list so downstream code can always treat the result
+as a collection. Returns the original collection unchanged, or `null` if the
+input is `null`.
+
+This is particularly important for `Path` objects: calling `.size()` on a
+single `Path` returns the file size in bytes, not `1`. Wrapping with
+`makeCollection` ensures `.size()` returns the count of files.
+
+```groovy
+makeCollection('file.txt')          // ['file.txt']
+makeCollection(['a.txt', 'b.txt'])  // ['a.txt', 'b.txt']
+makeCollection(null)                // null
+```
+
+### safeName(name)
+
+Converts a string into a filesystem-safe name.
+
+- Alphanumeric characters, `.`, `_`, and `-` are kept unchanged.
+- Spaces and tabs are removed.
+- All other characters are replaced with `_`.
+
+**Requires** Apache Commons Lang3 on the classpath. Place the JAR in a `lib/`
+directory inside your pipeline:
 
 ```bash
+mkdir -p lib
+wget -P lib \
+  https://repo1.maven.org/maven2/org/apache/commons/commons-lang3/3.12.0/commons-lang3-3.12.0.jar
+```
+
+```groovy
+safeName('My Sample: Run 1 (2026)')  // 'MySample_Run1_2026_'
+safeName('Data/File.txt')            // 'Data_File.txt'
+safeName("Tab\tRemoved")             // 'TabRemoved'
+```
+
+### logException(exception)
+
+Logs a `Throwable` at ERROR level with its full stack trace, then re-throws it.
+If the exception is an `InvocationTargetException` the underlying cause is
+logged instead.
+
+```groovy
+try {
+    riskyOperation()
+} catch (Exception e) {
+    logException(e)
+}
+```
+
+## Examples
+
+### Memory limit retry with log scanning
+
+```groovy
+plugins {
+    id 'nf-crukci-support@1.1-SNAPSHOT'
+}
+
+// crukci { } block not required - default patterns cover the common cases
+
+process alignReads {
+    errorStrategy { task.exitStatus == 137 ? 'retry' : 'terminate' }
+    maxRetries 3
+    memory { 8.GB * task.attempt }
+
+    input:
+    path reads
+
+    script:
+    """
+    bwa mem ref.fa ${reads} > aligned.sam
+    """
+}
+```
+
+When SLURM kills the job for exceeding its memory limit the log will contain
+`Exceeded job memory limit`. The plugin writes exit code 137 to `.exitcode`,
+Nextflow reads that as the task exit status, and the `errorStrategy` triggers a
+retry with doubled memory.
+
+### Java tool with automatic memory sizing
+
+```groovy
+include { javaMemoryOptions } from 'plugin/nf-crukci-support'
+
+process runPicard {
+    memory '8 GB'
+
+    input:
+    path bam
+
+    output:
+    path 'metrics.txt'
+
+    script:
+    def mem = javaMemoryOptions(task)
+    """
+    java ${mem.jvmOpts} -jar picard.jar CollectAlignmentSummaryMetrics \
+        INPUT=${bam} OUTPUT=metrics.txt
+    """
+}
+```
+
+### Safe output filenames
+
+```groovy
+include { safeName } from 'plugin/nf-crukci-support'
+
+process createReport {
+    input:
+    val sampleName
+
+    output:
+    path "${safeName(sampleName)}_report.html"
+
+    script:
+    """
+    generate_report.py --sample "${sampleName}" \
+        --output "${safeName(sampleName)}_report.html"
+    """
+}
+```
+
+## Building and Testing
+
+```bash
+# Build
 mvn clean package
-```
 
-## Testing
-
-```bash
+# Run tests
 mvn test
 ```
 
@@ -79,6 +406,3 @@ Developed at the Cancer Research UK Cambridge Institute.
 ## Authors
 
 Richard Bowers (richard.bowers@cruk.cam.ac.uk)
-
-With assistance from GitHub CoPilot.
-
