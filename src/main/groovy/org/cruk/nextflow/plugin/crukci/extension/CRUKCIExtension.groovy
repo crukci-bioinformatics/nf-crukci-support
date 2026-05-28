@@ -139,7 +139,7 @@ class CRUKCIExtension extends PluginExtensionPoint
      * @return The size of the collection, 1 for non-collections, or 0 for null.
      */
     @Function
-    def sizeOf(thing)
+    int sizeOf(Object thing)
     {
         if (thing instanceof Collection || thing instanceof Map)
         {
@@ -176,7 +176,7 @@ class CRUKCIExtension extends PluginExtensionPoint
      * @return A collection containing the object, or null if the input is null.
      */
     @Function
-    def makeCollection(thingOrList)
+    Collection makeCollection(Object thingOrList)
     {
         if (thingOrList instanceof Collection)
         {
@@ -209,7 +209,7 @@ class CRUKCIExtension extends PluginExtensionPoint
      * @return A sanitized filename string.
      */
     @Function
-    def safeName(name)
+    String safeName(CharSequence name)
     {
         def nameStr = name.toString()
         def safe = new StringBuilder(nameStr.length())
@@ -249,7 +249,7 @@ class CRUKCIExtension extends PluginExtensionPoint
      * @throws Exception The original exception after logging.
      */
     @Function
-    def logException(Throwable e)
+    void logException(Throwable e)
     {
         def forLogging = e
         try

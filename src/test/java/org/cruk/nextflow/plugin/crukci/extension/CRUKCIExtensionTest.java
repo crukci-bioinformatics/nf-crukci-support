@@ -27,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import groovy.util.Expando;
 import nextflow.Session;
 import nextflow.processor.TaskConfig;
 import nextflow.script.ScriptBinding;
@@ -147,15 +148,15 @@ class CRUKCIExtensionTest
         task.put("memory", "1024MB");
         task.put("attempt", 1);
 
-        Object result = extension.javaMemoryOptions(task);
+        Expando result = extension.javaMemoryOptions(task);
 
         assertNotNull(result);
 
         final MemoryUnit taskAllocation = MemoryUnit.of(1024L << 20);
         final MemoryUnit heap = taskAllocation.minus(DEFAULT_JAVA_METASPACE).minus(DEFAULT_JAVA_OVERHEAD);
 
-        // Access Expando properties using reflection
-        Map<String, Object> props = getExpandoProperties(result);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> props = result.getProperties();
 
         assertEquals(heap, props.get("heap")); // 1024 - 128 meta - 64 overhead
         assertEquals(DEFAULT_JAVA_METASPACE, props.get("metaSpace"));
@@ -178,14 +179,15 @@ class CRUKCIExtensionTest
         task.put("memory", "2048MB");
         task.put("attempt", 1);
 
-        Object result = extension.javaMemoryOptions(task);
+        Expando result = extension.javaMemoryOptions(task);
 
         final MemoryUnit taskAllocation = MemoryUnit.of(2048L << 20);
         final MemoryUnit overhead = MemoryUnit.of(100L << 20);
         final MemoryUnit metaspace = MemoryUnit.of(256L << 20);
         final MemoryUnit heap = taskAllocation.minus(overhead).minus(metaspace);
 
-        Map<String, Object> props = getExpandoProperties(result);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> props = result.getProperties();
 
         assertEquals(heap, props.get("heap"));
         assertEquals(metaspace, props.get("metaSpace"));
@@ -208,13 +210,14 @@ class CRUKCIExtensionTest
         task.put("memory", "1024MB");
         task.put("attempt", 1);
 
-        Object result = extension.javaMemoryOptions(task);
+        Expando result = extension.javaMemoryOptions(task);
 
         MemoryUnit taskAllocation = MemoryUnit.of(1024L << 20);
 
         final MemoryUnit heap = taskAllocation.minus(MINIMUM_JAVA_METASPACE).minus(MINIMUM_JAVA_OVERHEAD);
 
-        Map<String, Object> props = getExpandoProperties(result);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> props = result.getProperties();
 
         // Should be clamped to minimum values
         assertEquals(heap, props.get("heap"));
@@ -251,9 +254,9 @@ class CRUKCIExtensionTest
     {
         List<String> list = Arrays.asList("one", "two", "three");
 
-        Object result = extension.sizeOf(list);
+        int result = extension.sizeOf(list);
 
-        assertEquals(3, ((Number) result).intValue());
+        assertEquals(3, result);
     }
 
     /**
@@ -264,9 +267,9 @@ class CRUKCIExtensionTest
     {
         List<String> list = Collections.emptyList();
 
-        Object result = extension.sizeOf(list);
+        int result = extension.sizeOf(list);
 
-        assertEquals(0, ((Number) result).intValue());
+        assertEquals(0, result);
     }
 
     /**
@@ -279,9 +282,9 @@ class CRUKCIExtensionTest
         map.put("a", 1);
         map.put("b", 2);
 
-        Object result = extension.sizeOf(map);
+        int result = extension.sizeOf(map);
 
-        assertEquals(2, ((Number) result).intValue());
+        assertEquals(2, result);
     }
 
     /**
@@ -292,9 +295,9 @@ class CRUKCIExtensionTest
     {
         String str = "single";
 
-        Object result = extension.sizeOf(str);
+        int result = extension.sizeOf(str);
 
-        assertEquals(1, ((Number) result).intValue());
+        assertEquals(1, result);
     }
 
     /**
@@ -303,9 +306,9 @@ class CRUKCIExtensionTest
     @Test
     void testSizeOf_Null()
     {
-        Object result = extension.sizeOf(null);
+        int result = extension.sizeOf(null);
 
-        assertEquals(0, ((Number) result).intValue());
+        assertEquals(0, result);
     }
 
     /**
@@ -316,7 +319,7 @@ class CRUKCIExtensionTest
     {
         List<String> list = Arrays.asList("one", "two");
 
-        Object result = extension.makeCollection(list);
+        Collection<?> result = extension.makeCollection(list);
 
         assertSame(list, result);
     }
@@ -329,10 +332,7 @@ class CRUKCIExtensionTest
     {
         String str = "single";
 
-        Object result = extension.makeCollection(str);
-
-        assertTrue(result instanceof Collection);
-        Collection<?> collection = (Collection<?>) result;
+        Collection<?> collection = extension.makeCollection(str);
         assertEquals(1, collection.size());
         assertTrue(collection.contains("single"));
     }
@@ -343,7 +343,7 @@ class CRUKCIExtensionTest
     @Test
     void testMakeCollection_Null()
     {
-        Object result = extension.makeCollection(null);
+        Collection<?> result = extension.makeCollection(null);
 
         assertNull(result);
     }
@@ -354,9 +354,9 @@ class CRUKCIExtensionTest
     @Test
     void testSafeName_Alphanumeric()
     {
-        Object result = extension.safeName("Sample123");
+        String result = extension.safeName("Sample123");
 
-        assertEquals("Sample123", result.toString());
+        assertEquals("Sample123", result);
     }
 
     /**
@@ -365,9 +365,9 @@ class CRUKCIExtensionTest
     @Test
     void testSafeName_WithSpaces()
     {
-        Object result = extension.safeName("Sample With Spaces");
+        String result = extension.safeName("Sample With Spaces");
 
-        assertEquals("SampleWithSpaces", result.toString());
+        assertEquals("SampleWithSpaces", result);
     }
 
     /**
@@ -376,9 +376,9 @@ class CRUKCIExtensionTest
     @Test
     void testSafeName_WithTabs()
     {
-        Object result = extension.safeName("Sample\tWith\tTabs");
+        String result = extension.safeName("Sample\tWith\tTabs");
 
-        assertEquals("SampleWithTabs", result.toString());
+        assertEquals("SampleWithTabs", result);
     }
 
     /**
@@ -387,9 +387,9 @@ class CRUKCIExtensionTest
     @Test
     void testSafeName_SpecialCharacters()
     {
-        Object result = extension.safeName("Sample@#$%Name");
+        String result = extension.safeName("Sample@#$%Name");
 
-        assertEquals("Sample____Name", result.toString());
+        assertEquals("Sample____Name", result);
     }
 
     /**
@@ -398,9 +398,9 @@ class CRUKCIExtensionTest
     @Test
     void testSafeName_AllowedSpecialCharacters()
     {
-        Object result = extension.safeName("Sample_Name-v1.0");
+        String result = extension.safeName("Sample_Name-v1.0");
 
-        assertEquals("Sample_Name-v1.0", result.toString());
+        assertEquals("Sample_Name-v1.0", result);
     }
 
     /**
@@ -409,9 +409,9 @@ class CRUKCIExtensionTest
     @Test
     void testSafeName_MixedCharacters()
     {
-        Object result = extension.safeName("Sample (Name) [v2.0]");
+        String result = extension.safeName("Sample (Name) [v2.0]");
 
-        assertEquals("Sample_Name__v2.0_", result.toString());
+        assertEquals("Sample_Name__v2.0_", result);
     }
 
     /**
@@ -420,10 +420,10 @@ class CRUKCIExtensionTest
     @Test
     void testSafeName_UnicodeCharacters()
     {
-        Object result = extension.safeName("Sample_Ñame_日本語");
+        String result = extension.safeName("Sample_Ñame_日本語");
 
         // Non-ASCII alphanumeric should be converted to underscores
-        assertEquals("Sample__ame____", result.toString());
+        assertEquals("Sample__ame____", result);
     }
 
     /**
@@ -472,29 +472,5 @@ class CRUKCIExtensionTest
 
         assertSame(exception, thrown);
         assertEquals(innerCause, thrown.getCause());
-    }
-
-    /**
-     * Helper method to extract properties from Groovy Expando object.
-     *
-     * @param expando The Expando object.
-     * @return Map of property names to values.
-     */
-    private Map<String, Object> getExpandoProperties(Object expando)
-    {
-        Map<String, Object> props = new HashMap<>();
-        try
-        {
-            // Expando properties can be accessed via getProperties() method
-            java.lang.reflect.Method getPropertiesMethod = expando.getClass().getMethod("getProperties");
-            @SuppressWarnings("unchecked")
-            Map<String, Object> properties = (Map<String, Object>) getPropertiesMethod.invoke(expando);
-            props.putAll(properties);
-        }
-        catch (Exception e)
-        {
-            fail("Failed to extract Expando properties: " + e.getMessage());
-        }
-        return props;
     }
 }
