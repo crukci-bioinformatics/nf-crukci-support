@@ -11,6 +11,7 @@ import nextflow.Session
 import nextflow.plugin.extension.Function
 import nextflow.plugin.extension.PluginExtensionPoint
 import nextflow.processor.TaskConfig
+import nextflow.util.MemoryUnit
 
 /**
  * CRUK CI utility extension for Nextflow pipelines.
@@ -45,11 +46,13 @@ class CRUKCIExtension extends PluginExtensionPoint
      * @return The calculated Java heap size in megabytes.
      *
      * @throws Exception If insufficient memory is available after overhead.
+     *
+     * @deprecated Use {@code javaMemoryOptions} in preference to this method.
      */
-    @Function
-    def javaMemMB(TaskConfig task)
+    @Function @Deprecated
+    long javaMemMB(TaskConfig task)
     {
-        return javaMemoryOptions(task).heap
+        return javaMemoryOptions(task).heap.mega
     }
 
     /**
@@ -62,12 +65,12 @@ class CRUKCIExtension extends PluginExtensionPoint
      * space size plus the miscellaneous overhead is allocated for the JVM's heap.
      *
      * <p>
-     * Returns an object with numerous fields (all numbers are megabytes):
+     * Returns an object with numerous fields (types in brackets):
      * <ol>
-     * <li>"heap" - The heap size.</li>
-     * <li>"metaSpace" - The meta space size.</li>
-     * <li>"misc" - The additional overhead taken for everything else.</li>
-     * <li>"all" - The task's allocated memory. Same as task.memory.toMega().</li>
+     * <li>"heap" - The heap size ({@code MemoryUnit}).</li>
+     * <li>"metaSpace" - The meta space size ({@code MemoryUnit}).</li>
+     * <li>"misc" - The additional overhead taken for everything else ({@code MemoryUnit}).</li>
+     * <li>"all" - The task's allocated memory ({@code MemoryUnit}); same as {@code task.memory}.</li>
      * <li>"jvmOpts" - The string to include in the Java command line for the program
      * to set the memory values as calculated. This string must not be quoted in
      * the shell script.</li>
@@ -75,32 +78,51 @@ class CRUKCIExtension extends PluginExtensionPoint
      * </p>
      *
      * @param task The task object containing memory allocation information.
-     * @return An Expando object with heap, metaSpace, misc, all, and jvmOpts fields.
-     * @throws Exception If insufficient memory is available after overhead.
+     *
+     * @return An Expando object with {@code heap}, {@code metaSpace}, {@code misc},
+     * {@code all} and {@code jvmOpts} fields.
+     *
+     * @throws InsufficientMemoryException if insufficient memory is available after overheads are
+     * taken off the task allocation.
+     *
+     * @see MemoryUnit
      */
     @Function
-    def javaMemoryOptions(TaskConfig task)
+    Expando javaMemoryOptions(TaskConfig task)
     {
-        final long taskAllocation = task.memory.mega
+        final MemoryUnit taskAllocation = task.memory
 
         final def crukciConfig = new CRUKCIConfig(session)
 
-        final long heap = taskAllocation - crukciConfig.javaOverhead.mega - crukciConfig.javaMetaspace.mega
-
-        if (heap < CRUKCIConfig.MINIMUM_JAVA_HEAP)
+        MemoryUnit heap
+        try
         {
-            logger.error("Task {} attempt {}: allocated {}MB; JVM overhead {}; Java Meta Space {}.",
-                         task.name,task.attempt, taskAllocation, crukciConfig.javaOverhead, crukciConfig.javaMetaspace)
-            def requiredMin = crukciConfig.javaOverhead.mega + crukciConfig.javaMetaspace.mega + CRUKCIConfig.MINIMUM_JAVA_HEAP
-            throw new Exception("No memory left after taking JVM overheads. Need at least ${requiredMin} MB allocated.")
+            heap = taskAllocation.minus(crukciConfig.javaOverhead).minus(crukciConfig.javaMetaspace)
+        }
+        catch (AssertionError e)
+        {
+            // Thrown if the calculation above ends up being a negative number.
+            // Deal with the problem by giving it zero memory, which is then
+            // handled below in the same manner as a positive but too small
+            // amount.
+            heap = MemoryUnit.of(0L)
+        }
+
+        if ((heap <=> CRUKCIConfig.MINIMUM_JAVA_HEAP) < 0)
+        {
+            logger.error("Task {} attempt {}: allocated {}; JVM overhead {}; Java Meta Space {}.",
+                         task.name, task.attempt, taskAllocation, crukciConfig.javaOverhead, crukciConfig.javaMetaspace)
+
+            def requiredMin = crukciConfig.javaOverhead.plus(crukciConfig.javaMetaspace).plus(CRUKCIConfig.MINIMUM_JAVA_HEAP)
+            throw new InsufficientMemoryException(taskAllocation, crukciConfig.javaOverhead, crukciConfig.javaMetaspace)
         }
 
         def info = new Expando()
         info.heap = heap
-        info.metaSpace = crukciConfig.javaMetaspace.mega
-        info.misc = crukciConfig.javaOverhead.mega
+        info.metaSpace = crukciConfig.javaMetaspace
+        info.misc = crukciConfig.javaOverhead
         info.all = taskAllocation
-        info.jvmOpts = "-XX:MaxMetaspaceSize=${crukciConfig.javaMetaspace.mega}m -Xms${heap}m -Xmx${heap}m"
+        info.jvmOpts = "-XX:MaxMetaspaceSize=${crukciConfig.javaMetaspace.mega}m -Xms${heap.mega}m -Xmx${heap.mega}m"
 
         return info
     }
@@ -118,7 +140,7 @@ class CRUKCIExtension extends PluginExtensionPoint
      * @return The size of the collection, 1 for non-collections, or 0 for null.
      */
     @Function
-    def sizeOf(thing)
+    int sizeOf(Object thing)
     {
         if (thing instanceof Collection || thing instanceof Map)
         {
@@ -155,7 +177,7 @@ class CRUKCIExtension extends PluginExtensionPoint
      * @return A collection containing the object, or null if the input is null.
      */
     @Function
-    def makeCollection(thingOrList)
+    Collection makeCollection(Object thingOrList)
     {
         if (thingOrList instanceof Collection)
         {
@@ -188,7 +210,7 @@ class CRUKCIExtension extends PluginExtensionPoint
      * @return A sanitized filename string.
      */
     @Function
-    def safeName(name)
+    String safeName(CharSequence name)
     {
         def nameStr = name.toString()
         def safe = new StringBuilder(nameStr.length())
@@ -228,7 +250,7 @@ class CRUKCIExtension extends PluginExtensionPoint
      * @throws Exception The original exception after logging.
      */
     @Function
-    def logException(Throwable e)
+    void logException(Throwable e)
     {
         def forLogging = e
         try

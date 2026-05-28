@@ -1,15 +1,14 @@
 package org.cruk.nextflow.plugin.crukci.extension;
 
+import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.MINIMUM_JAVA_HEAP;
 import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.MINIMUM_JAVA_METASPACE;
 import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.MINIMUM_JAVA_OVERHEAD;
-import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.MINIMUM_JAVA_HEAP;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.lenient;
 
 import java.lang.reflect.InvocationTargetException;
@@ -27,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import groovy.util.Expando;
 import nextflow.Session;
 import nextflow.processor.TaskConfig;
 import nextflow.script.ScriptBinding;
@@ -83,12 +83,13 @@ class CRUKCIExtensionTest
      * Test javaMemMB with sufficient memory.
      */
     @Test
+    @SuppressWarnings("deprecation")
     void testJavaMemMB_SufficientMemory()
     {
         TaskConfig task = new TaskConfig();
         task.put("memory", "512MB");
 
-        Number result = (Number)extension.javaMemMB(task);
+        Number result = extension.javaMemMB(task);
 
         assertEquals(320L, result.longValue()); // 512 - 128 metaspace - 64 overhead
     }
@@ -97,17 +98,18 @@ class CRUKCIExtensionTest
      * Test javaMemMB with exactly minimum memory.
      */
     @Test
+    @SuppressWarnings("deprecation")
     void testJavaMemMB_MinimumMemory()
     {
-        final long min = MINIMUM_JAVA_OVERHEAD + MINIMUM_JAVA_METASPACE + MINIMUM_JAVA_HEAP;
+        final long min = MINIMUM_JAVA_OVERHEAD.plus(MINIMUM_JAVA_METASPACE).plus(MINIMUM_JAVA_HEAP).toMega();
 
-        crukciConfig.put("javaOverhead", MINIMUM_JAVA_OVERHEAD + "M");
-        crukciConfig.put("javaMetaspace", MINIMUM_JAVA_METASPACE + "M");
+        crukciConfig.put("javaOverhead", MINIMUM_JAVA_OVERHEAD.toMega() + "M");
+        crukciConfig.put("javaMetaspace", MINIMUM_JAVA_METASPACE.toMega() + "M");
 
         TaskConfig task = new TaskConfig();
         task.put("memory", min + "MB");
 
-        Number result = (Number)extension.javaMemMB(task);
+        Number result = extension.javaMemMB(task);
 
         assertEquals(16L, result.longValue());
     }
@@ -116,21 +118,21 @@ class CRUKCIExtensionTest
      * Test javaMemMB with insufficient memory throws exception.
      */
     @Test
+    @SuppressWarnings("deprecation")
     void testJavaMemMB_InsufficientMemory()
     {
-        final long min = MINIMUM_JAVA_OVERHEAD + MINIMUM_JAVA_METASPACE + MINIMUM_JAVA_HEAP;
+        final long min = MINIMUM_JAVA_OVERHEAD.plus(MINIMUM_JAVA_METASPACE).plus(MINIMUM_JAVA_HEAP).toMega();
 
-        crukciConfig.put("javaOverhead", MINIMUM_JAVA_OVERHEAD + "M");
-        crukciConfig.put("javaMetaspace", MINIMUM_JAVA_METASPACE + "M");
+        crukciConfig.put("javaOverhead", MINIMUM_JAVA_OVERHEAD.toMega() + "M");
+        crukciConfig.put("javaMetaspace", MINIMUM_JAVA_METASPACE.toMega() + "M");
 
         TaskConfig task = new TaskConfig();
         task.put("memory", (min - 32) + "MB"); // Less than minimum
 
-        Exception exception = assertThrows(Exception.class, () -> {
+        InsufficientMemoryException exception = assertThrows(InsufficientMemoryException.class, () -> {
             extension.javaMemMB(task);
         });
 
-        assertTrue(exception.getMessage().contains("No memory left after taking JVM overheads."));
         assertTrue(exception.getMessage().contains(min + " MB"));
     }
 
@@ -144,20 +146,22 @@ class CRUKCIExtensionTest
         task.put("memory", "1024MB");
         task.put("attempt", 1);
 
-        Object result = extension.javaMemoryOptions(task);
+        Expando result = extension.javaMemoryOptions(task);
 
         assertNotNull(result);
 
-        final long heap = 1024L - DEFAULT_JAVA_METASPACE.toMega() - DEFAULT_JAVA_OVERHEAD.toMega();
+        final MemoryUnit taskAllocation = MemoryUnit.of(1024L << 20);
+        final MemoryUnit heap = taskAllocation.minus(DEFAULT_JAVA_METASPACE).minus(DEFAULT_JAVA_OVERHEAD);
 
-        // Access Expando properties using reflection
-        Map<String, Object> props = getExpandoProperties(result);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> props = result.getProperties();
 
-        assertEquals(heap, ((Number) props.get("heap")).longValue()); // 1024 - 128 meta - 64 overhead
-        assertEquals(DEFAULT_JAVA_METASPACE.toMega(), (Long)props.get("metaSpace"));
-        assertEquals(DEFAULT_JAVA_OVERHEAD.toMega(), (Long)props.get("misc"));
-        assertEquals(1024L, (Long)props.get("all"));
-        assertEquals("-XX:MaxMetaspaceSize=" + DEFAULT_JAVA_METASPACE.toMega() + "m -Xms" + heap + "m -Xmx" + heap +"m", props.get("jvmOpts").toString());
+        assertEquals(heap, props.get("heap")); // 1024 - 128 meta - 64 overhead
+        assertEquals(DEFAULT_JAVA_METASPACE, props.get("metaSpace"));
+        assertEquals(DEFAULT_JAVA_OVERHEAD, props.get("misc"));
+        assertEquals(taskAllocation, props.get("all"));
+        assertEquals("-XX:MaxMetaspaceSize=" + DEFAULT_JAVA_METASPACE.toMega() + "m -Xms" + heap.toMega() + "m -Xmx" + heap.toMega() + "m",
+                     props.get("jvmOpts").toString());
     }
 
     /**
@@ -173,17 +177,22 @@ class CRUKCIExtensionTest
         task.put("memory", "2048MB");
         task.put("attempt", 1);
 
-        Object result = extension.javaMemoryOptions(task);
+        Expando result = extension.javaMemoryOptions(task);
 
-        final long heap = 2048L - 100 - 256;
+        final MemoryUnit taskAllocation = MemoryUnit.of(2048L << 20);
+        final MemoryUnit overhead = MemoryUnit.of(100L << 20);
+        final MemoryUnit metaspace = MemoryUnit.of(256L << 20);
+        final MemoryUnit heap = taskAllocation.minus(overhead).minus(metaspace);
 
-        Map<String, Object> props = getExpandoProperties(result);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> props = result.getProperties();
 
-        assertEquals(heap, ((Number) props.get("heap")).longValue()); // 2048 - 256 meta - 100 overhead
-        assertEquals(256L, ((Number) props.get("metaSpace")).intValue());
-        assertEquals(100L, ((Number) props.get("misc")).intValue());
-        assertEquals(2048L, ((Number) props.get("all")).intValue());
-        assertEquals("-XX:MaxMetaspaceSize=256m -Xms" + heap + "m -Xmx" + heap + "m", props.get("jvmOpts").toString());
+        assertEquals(heap, props.get("heap"));
+        assertEquals(metaspace, props.get("metaSpace"));
+        assertEquals(overhead, props.get("misc"));
+        assertEquals(MemoryUnit.of(2048L << 20), props.get("all"));
+        assertEquals("-XX:MaxMetaspaceSize=" + metaspace.toMega() + "m -Xms" + heap.toMega() + "m -Xmx" + heap.toMega() + "m",
+                     props.get("jvmOpts").toString());
     }
 
     /**
@@ -199,18 +208,22 @@ class CRUKCIExtensionTest
         task.put("memory", "1024MB");
         task.put("attempt", 1);
 
-        Object result = extension.javaMemoryOptions(task);
+        Expando result = extension.javaMemoryOptions(task);
 
-        final long heap = 1024L - MINIMUM_JAVA_METASPACE - MINIMUM_JAVA_OVERHEAD;
+        MemoryUnit taskAllocation = MemoryUnit.of(1024L << 20);
 
-        Map<String, Object> props = getExpandoProperties(result);
+        final MemoryUnit heap = taskAllocation.minus(MINIMUM_JAVA_METASPACE).minus(MINIMUM_JAVA_OVERHEAD);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> props = result.getProperties();
 
         // Should be clamped to minimum values
-        assertEquals(heap, ((Number) props.get("heap")).longValue()); // 1024 - 64 meta - 32 overhead
-        assertEquals(MINIMUM_JAVA_METASPACE, ((Number) props.get("metaSpace")).intValue()); // Clamped to minimum
-        assertEquals(MINIMUM_JAVA_OVERHEAD, ((Number) props.get("misc")).intValue()); // Clamped to minimum
+        assertEquals(heap, props.get("heap"));
+        assertEquals(MINIMUM_JAVA_METASPACE, props.get("metaSpace"));
+        assertEquals(MINIMUM_JAVA_OVERHEAD, props.get("misc"));
 
-        assertEquals("-XX:MaxMetaspaceSize=" + MINIMUM_JAVA_METASPACE + "m -Xms" + heap + "m -Xmx" + heap + "m", props.get("jvmOpts").toString());
+        assertEquals("-XX:MaxMetaspaceSize=" + MINIMUM_JAVA_METASPACE.toMega() + "m -Xms" + heap.toMega() + "m -Xmx" + heap.toMega() + "m",
+                     props.get("jvmOpts").toString());
     }
 
     /**
@@ -224,11 +237,7 @@ class CRUKCIExtensionTest
         task.put("attempt", 1);
         task.put("name", "testTask");
 
-        Exception exception = assertThrows(Exception.class, () -> {
-            extension.javaMemoryOptions(task);
-        });
-
-        assertTrue(exception.getMessage().contains("No memory left after taking JVM overheads"));
+        assertThrows(InsufficientMemoryException.class, () -> { extension.javaMemoryOptions(task); });
     }
 
     /**
@@ -239,9 +248,9 @@ class CRUKCIExtensionTest
     {
         List<String> list = Arrays.asList("one", "two", "three");
 
-        Object result = extension.sizeOf(list);
+        int result = extension.sizeOf(list);
 
-        assertEquals(3, ((Number) result).intValue());
+        assertEquals(3, result);
     }
 
     /**
@@ -252,9 +261,9 @@ class CRUKCIExtensionTest
     {
         List<String> list = Collections.emptyList();
 
-        Object result = extension.sizeOf(list);
+        int result = extension.sizeOf(list);
 
-        assertEquals(0, ((Number) result).intValue());
+        assertEquals(0, result);
     }
 
     /**
@@ -267,9 +276,9 @@ class CRUKCIExtensionTest
         map.put("a", 1);
         map.put("b", 2);
 
-        Object result = extension.sizeOf(map);
+        int result = extension.sizeOf(map);
 
-        assertEquals(2, ((Number) result).intValue());
+        assertEquals(2, result);
     }
 
     /**
@@ -280,9 +289,9 @@ class CRUKCIExtensionTest
     {
         String str = "single";
 
-        Object result = extension.sizeOf(str);
+        int result = extension.sizeOf(str);
 
-        assertEquals(1, ((Number) result).intValue());
+        assertEquals(1, result);
     }
 
     /**
@@ -291,9 +300,9 @@ class CRUKCIExtensionTest
     @Test
     void testSizeOf_Null()
     {
-        Object result = extension.sizeOf(null);
+        int result = extension.sizeOf(null);
 
-        assertEquals(0, ((Number) result).intValue());
+        assertEquals(0, result);
     }
 
     /**
@@ -304,7 +313,7 @@ class CRUKCIExtensionTest
     {
         List<String> list = Arrays.asList("one", "two");
 
-        Object result = extension.makeCollection(list);
+        Collection<?> result = extension.makeCollection(list);
 
         assertSame(list, result);
     }
@@ -317,10 +326,7 @@ class CRUKCIExtensionTest
     {
         String str = "single";
 
-        Object result = extension.makeCollection(str);
-
-        assertTrue(result instanceof Collection);
-        Collection<?> collection = (Collection<?>) result;
+        Collection<?> collection = extension.makeCollection(str);
         assertEquals(1, collection.size());
         assertTrue(collection.contains("single"));
     }
@@ -331,7 +337,7 @@ class CRUKCIExtensionTest
     @Test
     void testMakeCollection_Null()
     {
-        Object result = extension.makeCollection(null);
+        Collection<?> result = extension.makeCollection(null);
 
         assertNull(result);
     }
@@ -342,9 +348,9 @@ class CRUKCIExtensionTest
     @Test
     void testSafeName_Alphanumeric()
     {
-        Object result = extension.safeName("Sample123");
+        String result = extension.safeName("Sample123");
 
-        assertEquals("Sample123", result.toString());
+        assertEquals("Sample123", result);
     }
 
     /**
@@ -353,9 +359,9 @@ class CRUKCIExtensionTest
     @Test
     void testSafeName_WithSpaces()
     {
-        Object result = extension.safeName("Sample With Spaces");
+        String result = extension.safeName("Sample With Spaces");
 
-        assertEquals("SampleWithSpaces", result.toString());
+        assertEquals("SampleWithSpaces", result);
     }
 
     /**
@@ -364,9 +370,9 @@ class CRUKCIExtensionTest
     @Test
     void testSafeName_WithTabs()
     {
-        Object result = extension.safeName("Sample\tWith\tTabs");
+        String result = extension.safeName("Sample\tWith\tTabs");
 
-        assertEquals("SampleWithTabs", result.toString());
+        assertEquals("SampleWithTabs", result);
     }
 
     /**
@@ -375,9 +381,9 @@ class CRUKCIExtensionTest
     @Test
     void testSafeName_SpecialCharacters()
     {
-        Object result = extension.safeName("Sample@#$%Name");
+        String result = extension.safeName("Sample@#$%Name");
 
-        assertEquals("Sample____Name", result.toString());
+        assertEquals("Sample____Name", result);
     }
 
     /**
@@ -386,9 +392,9 @@ class CRUKCIExtensionTest
     @Test
     void testSafeName_AllowedSpecialCharacters()
     {
-        Object result = extension.safeName("Sample_Name-v1.0");
+        String result = extension.safeName("Sample_Name-v1.0");
 
-        assertEquals("Sample_Name-v1.0", result.toString());
+        assertEquals("Sample_Name-v1.0", result);
     }
 
     /**
@@ -397,9 +403,9 @@ class CRUKCIExtensionTest
     @Test
     void testSafeName_MixedCharacters()
     {
-        Object result = extension.safeName("Sample (Name) [v2.0]");
+        String result = extension.safeName("Sample (Name) [v2.0]");
 
-        assertEquals("Sample_Name__v2.0_", result.toString());
+        assertEquals("Sample_Name__v2.0_", result);
     }
 
     /**
@@ -408,10 +414,10 @@ class CRUKCIExtensionTest
     @Test
     void testSafeName_UnicodeCharacters()
     {
-        Object result = extension.safeName("Sample_Ñame_日本語");
+        String result = extension.safeName("Sample_Ñame_日本語");
 
         // Non-ASCII alphanumeric should be converted to underscores
-        assertEquals("Sample__ame____", result.toString());
+        assertEquals("Sample__ame____", result);
     }
 
     /**
@@ -460,29 +466,5 @@ class CRUKCIExtensionTest
 
         assertSame(exception, thrown);
         assertEquals(innerCause, thrown.getCause());
-    }
-
-    /**
-     * Helper method to extract properties from Groovy Expando object.
-     *
-     * @param expando The Expando object.
-     * @return Map of property names to values.
-     */
-    private Map<String, Object> getExpandoProperties(Object expando)
-    {
-        Map<String, Object> props = new HashMap<>();
-        try
-        {
-            // Expando properties can be accessed via getProperties() method
-            java.lang.reflect.Method getPropertiesMethod = expando.getClass().getMethod("getProperties");
-            @SuppressWarnings("unchecked")
-            Map<String, Object> properties = (Map<String, Object>) getPropertiesMethod.invoke(expando);
-            props.putAll(properties);
-        }
-        catch (Exception e)
-        {
-            fail("Failed to extract Expando properties: " + e.getMessage());
-        }
-        return props;
     }
 }
