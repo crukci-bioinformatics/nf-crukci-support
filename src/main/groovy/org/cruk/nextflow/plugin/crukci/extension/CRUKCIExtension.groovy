@@ -82,7 +82,8 @@ class CRUKCIExtension extends PluginExtensionPoint
      * @return An Expando object with {@code heap}, {@code metaSpace}, {@code misc},
      * {@code all} and {@code jvmOpts} fields.
      *
-     * @throws Exception If insufficient memory is available after overhead.
+     * @throws InsufficientMemoryException if insufficient memory is available after overheads are
+     * taken off the task allocation.
      *
      * @see MemoryUnit
      */
@@ -113,7 +114,7 @@ class CRUKCIExtension extends PluginExtensionPoint
                          task.name, task.attempt, taskAllocation, crukciConfig.javaOverhead, crukciConfig.javaMetaspace)
 
             def requiredMin = crukciConfig.javaOverhead.plus(crukciConfig.javaMetaspace).plus(CRUKCIConfig.MINIMUM_JAVA_HEAP)
-            throw new Exception("No memory left after taking JVM overheads. Need at least ${requiredMin} allocated.")
+            throw new InsufficientMemoryException(taskAllocation, crukciConfig.javaOverhead, crukciConfig.javaMetaspace)
         }
 
         def info = new Expando()

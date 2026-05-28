@@ -130,11 +130,10 @@ class CRUKCIExtensionTest
         TaskConfig task = new TaskConfig();
         task.put("memory", (min - 32) + "MB"); // Less than minimum
 
-        Exception exception = assertThrows(Exception.class, () -> {
+        InsufficientMemoryException exception = assertThrows(InsufficientMemoryException.class, () -> {
             extension.javaMemMB(task);
         });
 
-        assertTrue(exception.getMessage().contains("No memory left after taking JVM overheads."));
         assertTrue(exception.getMessage().contains(min + " MB"));
     }
 
@@ -239,11 +238,7 @@ class CRUKCIExtensionTest
         task.put("attempt", 1);
         task.put("name", "testTask");
 
-        Exception exception = assertThrows(Exception.class, () -> {
-            extension.javaMemoryOptions(task);
-        });
-
-        assertTrue(exception.getMessage().contains("No memory left after taking JVM overheads"));
+        assertThrows(InsufficientMemoryException.class, () -> { extension.javaMemoryOptions(task); });
     }
 
     /**
