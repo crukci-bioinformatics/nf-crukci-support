@@ -86,8 +86,8 @@ class CRUKCIConfigTest
         CRUKCIConfig config = new CRUKCIConfig(session);
 
         assertEquals(5000, config.maxLinesToScan);
-        assertEquals(256, config.javaOverhead.toMega());
-        assertEquals(512, config.javaMetaspace.toMega());
+        assertEquals(256L, config.javaOverhead.toMega());
+        assertEquals(512L, config.javaMetaspace.toMega());
     }
 
     /**
@@ -105,8 +105,8 @@ class CRUKCIConfigTest
 
         CRUKCIConfig config = new CRUKCIConfig(session);
 
-        assertEquals(MINIMUM_JAVA_OVERHEAD, config.javaOverhead.toMega());
-        assertEquals(MINIMUM_JAVA_METASPACE, config.javaMetaspace.toMega());
+        assertEquals(MINIMUM_JAVA_OVERHEAD, config.javaOverhead);
+        assertEquals(MINIMUM_JAVA_METASPACE, config.javaMetaspace);
     }
 
     /**

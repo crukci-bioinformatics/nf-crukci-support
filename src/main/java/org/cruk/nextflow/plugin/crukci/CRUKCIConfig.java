@@ -25,19 +25,24 @@ import nextflow.util.MemoryUnit;
 public class CRUKCIConfig
 {
     /**
-     * The smallest allowed margin for JVM overheads.
+     * One megabyte, for legibility of setting up the other constants.
      */
-    public static final int MINIMUM_JAVA_OVERHEAD = 32;
+    private static final long MEGA = 1 << 20;
 
     /**
-     * The default margin for JVM overheads.
+     * The smallest allowed margin for JVM overheads: 32MB.
+     */
+    public static final MemoryUnit MINIMUM_JAVA_OVERHEAD = MemoryUnit.of(32L * MEGA);
+
+    /**
+     * The default margin for JVM overheads: 64MB.
      */
     public static final String DEFAULT_JAVA_OVERHEAD = "64M";
 
     /**
      * The smallest allowed meta space size (class definitions etc).
      */
-    public static final int MINIMUM_JAVA_METASPACE = 64;
+    public static final MemoryUnit MINIMUM_JAVA_METASPACE = MemoryUnit.of(64L * MEGA);
 
     /**
      * The default meta space size.
@@ -45,9 +50,9 @@ public class CRUKCIConfig
     public static final String DEFAULT_JAVA_METASPACE = "128M";
 
     /**
-     * The smallest allowed Java heap size to be functional.
+     * The smallest allowed Java heap size to be functional: 16MB.
      */
-    public static final int MINIMUM_JAVA_HEAP = 16;
+    public static final MemoryUnit MINIMUM_JAVA_HEAP = MemoryUnit.of(16L * MEGA);
 
     /**
      * The default number of log lines to scan to find error patterns.
@@ -76,7 +81,7 @@ public class CRUKCIConfig
     public final MemoryUnit javaMetaspace;
 
     /**
-     * Maximum number of lines to scan (0 &lt;= is unlimited).
+     * Maximum number of lines to scan (&le;0 is unlimited).
      */
     public final int maxLinesToScan;
 
@@ -126,7 +131,7 @@ public class CRUKCIConfig
      *
      * @param session The Nextflow session.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked","rawtypes"})
     public CRUKCIConfig(Session session)
     {
         Map<String, Object> configMap = Collections.emptyMap();
@@ -138,24 +143,24 @@ public class CRUKCIConfig
         }
 
         MemoryUnit overhead = MemoryUnit.of(configMap.getOrDefault("javaOverhead", DEFAULT_JAVA_OVERHEAD).toString());
-        if (overhead.toMega() < MINIMUM_JAVA_OVERHEAD)
+        if (overhead.compareTo(MINIMUM_JAVA_OVERHEAD) < 0)
         {
             if (!limitsWarned)
             {
-                logger.warn("javaOverhead is set to {}, which is too small. Setting to the minimum of {}MB.", overhead, MINIMUM_JAVA_OVERHEAD);
+                logger.warn("javaOverhead is set to {}, which is too small. Setting to the minimum of {}.", overhead, MINIMUM_JAVA_OVERHEAD);
             }
-            overhead = MemoryUnit.of(MINIMUM_JAVA_OVERHEAD << 20);
+            overhead = MINIMUM_JAVA_OVERHEAD;
         }
         this.javaOverhead = overhead;
 
         MemoryUnit metaspace = MemoryUnit.of(configMap.getOrDefault("javaMetaspace", DEFAULT_JAVA_METASPACE).toString());
-        if (metaspace.toMega() < MINIMUM_JAVA_METASPACE)
+        if (metaspace.compareTo(MINIMUM_JAVA_METASPACE) < 0)
         {
             if (!limitsWarned)
             {
-                logger.warn("javaMetaspace is set to {}, which is too small. Setting to the minimum of {}MB.", metaspace, MINIMUM_JAVA_METASPACE);
+                logger.warn("javaMetaspace is set to {}, which is too small. Setting to the minimum of {}.", metaspace, MINIMUM_JAVA_METASPACE);
             }
-            metaspace = MemoryUnit.of(MINIMUM_JAVA_METASPACE << 20);
+            metaspace = MINIMUM_JAVA_METASPACE;
         }
         this.javaMetaspace = metaspace;
 

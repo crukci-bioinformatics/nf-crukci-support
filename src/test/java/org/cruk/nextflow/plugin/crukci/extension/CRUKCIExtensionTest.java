@@ -1,8 +1,8 @@
 package org.cruk.nextflow.plugin.crukci.extension;
 
+import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.MINIMUM_JAVA_HEAP;
 import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.MINIMUM_JAVA_METASPACE;
 import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.MINIMUM_JAVA_OVERHEAD;
-import static org.cruk.nextflow.plugin.crukci.CRUKCIConfig.MINIMUM_JAVA_HEAP;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -83,12 +83,13 @@ class CRUKCIExtensionTest
      * Test javaMemMB with sufficient memory.
      */
     @Test
+    @SuppressWarnings("deprecation")
     void testJavaMemMB_SufficientMemory()
     {
         TaskConfig task = new TaskConfig();
         task.put("memory", "512MB");
 
-        Number result = (Number)extension.javaMemMB(task);
+        Number result = extension.javaMemMB(task);
 
         assertEquals(320L, result.longValue()); // 512 - 128 metaspace - 64 overhead
     }
@@ -97,17 +98,18 @@ class CRUKCIExtensionTest
      * Test javaMemMB with exactly minimum memory.
      */
     @Test
+    @SuppressWarnings("deprecation")
     void testJavaMemMB_MinimumMemory()
     {
-        final long min = MINIMUM_JAVA_OVERHEAD + MINIMUM_JAVA_METASPACE + MINIMUM_JAVA_HEAP;
+        final long min = MINIMUM_JAVA_OVERHEAD.plus(MINIMUM_JAVA_METASPACE).plus(MINIMUM_JAVA_HEAP).toMega();
 
-        crukciConfig.put("javaOverhead", MINIMUM_JAVA_OVERHEAD + "M");
-        crukciConfig.put("javaMetaspace", MINIMUM_JAVA_METASPACE + "M");
+        crukciConfig.put("javaOverhead", MINIMUM_JAVA_OVERHEAD.toMega() + "M");
+        crukciConfig.put("javaMetaspace", MINIMUM_JAVA_METASPACE.toMega() + "M");
 
         TaskConfig task = new TaskConfig();
         task.put("memory", min + "MB");
 
-        Number result = (Number)extension.javaMemMB(task);
+        Number result = extension.javaMemMB(task);
 
         assertEquals(16L, result.longValue());
     }
@@ -116,12 +118,13 @@ class CRUKCIExtensionTest
      * Test javaMemMB with insufficient memory throws exception.
      */
     @Test
+    @SuppressWarnings("deprecation")
     void testJavaMemMB_InsufficientMemory()
     {
-        final long min = MINIMUM_JAVA_OVERHEAD + MINIMUM_JAVA_METASPACE + MINIMUM_JAVA_HEAP;
+        final long min = MINIMUM_JAVA_OVERHEAD.plus(MINIMUM_JAVA_METASPACE).plus(MINIMUM_JAVA_HEAP).toMega();
 
-        crukciConfig.put("javaOverhead", MINIMUM_JAVA_OVERHEAD + "M");
-        crukciConfig.put("javaMetaspace", MINIMUM_JAVA_METASPACE + "M");
+        crukciConfig.put("javaOverhead", MINIMUM_JAVA_OVERHEAD.toMega() + "M");
+        crukciConfig.put("javaMetaspace", MINIMUM_JAVA_METASPACE.toMega() + "M");
 
         TaskConfig task = new TaskConfig();
         task.put("memory", (min - 32) + "MB"); // Less than minimum
@@ -148,16 +151,18 @@ class CRUKCIExtensionTest
 
         assertNotNull(result);
 
-        final long heap = 1024L - DEFAULT_JAVA_METASPACE.toMega() - DEFAULT_JAVA_OVERHEAD.toMega();
+        final MemoryUnit taskAllocation = MemoryUnit.of(1024L << 20);
+        final MemoryUnit heap = taskAllocation.minus(DEFAULT_JAVA_METASPACE).minus(DEFAULT_JAVA_OVERHEAD);
 
         // Access Expando properties using reflection
         Map<String, Object> props = getExpandoProperties(result);
 
-        assertEquals(heap, ((Number) props.get("heap")).longValue()); // 1024 - 128 meta - 64 overhead
-        assertEquals(DEFAULT_JAVA_METASPACE.toMega(), (Long)props.get("metaSpace"));
-        assertEquals(DEFAULT_JAVA_OVERHEAD.toMega(), (Long)props.get("misc"));
-        assertEquals(1024L, (Long)props.get("all"));
-        assertEquals("-XX:MaxMetaspaceSize=" + DEFAULT_JAVA_METASPACE.toMega() + "m -Xms" + heap + "m -Xmx" + heap +"m", props.get("jvmOpts").toString());
+        assertEquals(heap, props.get("heap")); // 1024 - 128 meta - 64 overhead
+        assertEquals(DEFAULT_JAVA_METASPACE, props.get("metaSpace"));
+        assertEquals(DEFAULT_JAVA_OVERHEAD, props.get("misc"));
+        assertEquals(taskAllocation, props.get("all"));
+        assertEquals("-XX:MaxMetaspaceSize=" + DEFAULT_JAVA_METASPACE.toMega() + "m -Xms" + heap.toMega() + "m -Xmx" + heap.toMega() + "m",
+                     props.get("jvmOpts").toString());
     }
 
     /**
@@ -175,15 +180,19 @@ class CRUKCIExtensionTest
 
         Object result = extension.javaMemoryOptions(task);
 
-        final long heap = 2048L - 100 - 256;
+        final MemoryUnit taskAllocation = MemoryUnit.of(2048L << 20);
+        final MemoryUnit overhead = MemoryUnit.of(100L << 20);
+        final MemoryUnit metaspace = MemoryUnit.of(256L << 20);
+        final MemoryUnit heap = taskAllocation.minus(overhead).minus(metaspace);
 
         Map<String, Object> props = getExpandoProperties(result);
 
-        assertEquals(heap, ((Number) props.get("heap")).longValue()); // 2048 - 256 meta - 100 overhead
-        assertEquals(256L, ((Number) props.get("metaSpace")).intValue());
-        assertEquals(100L, ((Number) props.get("misc")).intValue());
-        assertEquals(2048L, ((Number) props.get("all")).intValue());
-        assertEquals("-XX:MaxMetaspaceSize=256m -Xms" + heap + "m -Xmx" + heap + "m", props.get("jvmOpts").toString());
+        assertEquals(heap, props.get("heap"));
+        assertEquals(metaspace, props.get("metaSpace"));
+        assertEquals(overhead, props.get("misc"));
+        assertEquals(MemoryUnit.of(2048L << 20), props.get("all"));
+        assertEquals("-XX:MaxMetaspaceSize=" + metaspace.toMega() + "m -Xms" + heap.toMega() + "m -Xmx" + heap.toMega() + "m",
+                     props.get("jvmOpts").toString());
     }
 
     /**
@@ -201,16 +210,19 @@ class CRUKCIExtensionTest
 
         Object result = extension.javaMemoryOptions(task);
 
-        final long heap = 1024L - MINIMUM_JAVA_METASPACE - MINIMUM_JAVA_OVERHEAD;
+        MemoryUnit taskAllocation = MemoryUnit.of(1024L << 20);
+
+        final MemoryUnit heap = taskAllocation.minus(MINIMUM_JAVA_METASPACE).minus(MINIMUM_JAVA_OVERHEAD);
 
         Map<String, Object> props = getExpandoProperties(result);
 
         // Should be clamped to minimum values
-        assertEquals(heap, ((Number) props.get("heap")).longValue()); // 1024 - 64 meta - 32 overhead
-        assertEquals(MINIMUM_JAVA_METASPACE, ((Number) props.get("metaSpace")).intValue()); // Clamped to minimum
-        assertEquals(MINIMUM_JAVA_OVERHEAD, ((Number) props.get("misc")).intValue()); // Clamped to minimum
+        assertEquals(heap, props.get("heap"));
+        assertEquals(MINIMUM_JAVA_METASPACE, props.get("metaSpace"));
+        assertEquals(MINIMUM_JAVA_OVERHEAD, props.get("misc"));
 
-        assertEquals("-XX:MaxMetaspaceSize=" + MINIMUM_JAVA_METASPACE + "m -Xms" + heap + "m -Xmx" + heap + "m", props.get("jvmOpts").toString());
+        assertEquals("-XX:MaxMetaspaceSize=" + MINIMUM_JAVA_METASPACE.toMega() + "m -Xms" + heap.toMega() + "m -Xmx" + heap.toMega() + "m",
+                     props.get("jvmOpts").toString());
     }
 
     /**
