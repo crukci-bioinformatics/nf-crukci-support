@@ -197,22 +197,19 @@ class CRUKCIExtension extends PluginExtensionPoint
      * alphanumeric, dot, underscore or hyphen is converted to an underscore.
      * Spaces are just removed.
      *
-     * Note that commons-lang3 must be made available to use this function.
-     * This is done by creating a "lib" directory in your pipeline and either
-     * putting the commons-lang3 JAR file into that directory. The suggestion
-     * of putting a Groovy script "lib" that can still use @Grab to fetch
-     * the file does not work. This change came in with 24.10.0.
-     *
      * See https://github.com/nextflow-io/nextflow/issues/5234
      * and https://github.com/nextflow-io/nextflow/issues/5441
      *
-     * @param name The name to make safe for use as a filename.
+     * @param name The name to make safe for use as a filename. Some things
+     * can come into here that aren't string based (grouping key for example)
+     * so this is just an object.
+     *
      * @return A sanitized filename string.
      */
     @Function
-    String safeName(CharSequence name)
+    String safeName(Object name)
     {
-        def nameStr = name.toString()
+        def nameStr = name == null ? '' : name.toString()
         def safe = new StringBuilder(nameStr.length())
         def iter = new StringCharacterIterator(nameStr)
 
