@@ -26,19 +26,6 @@ sanitisation and exception logging.
 - Nextflow 25.04.0 or newer
 - Java 17
 
-### Installing the Plugin
-
-This plugin is not listed in the Nextflow main plugin registry. To allow
-Nextflow to download it automatically, set the `NXF_PLUGINS_TEST_REPOSITORY`
-environment variable to include the CRUK-CI plugin index alongside the
-standard one:
-
-```bash
-export NXF_PLUGINS_TEST_REPOSITORY="https://github.com/crukci-bioinformatics/nextflow-plugins/raw/refs/heads/master/plugins.json,https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json"
-```
-
-Add this to your `.bashrc` so it is set for every session.
-
 ### Building from Source
 
 ```bash
