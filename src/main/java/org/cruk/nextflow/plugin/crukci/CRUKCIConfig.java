@@ -11,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import nextflow.Session;
+import nextflow.config.schema.ConfigOption;
+import nextflow.config.schema.ScopeName;
 import nextflow.util.MemoryUnit;
 
 /**
@@ -22,6 +24,7 @@ import nextflow.util.MemoryUnit;
  *
  * @author Richard Bowers
  */
+@ScopeName("crukci")
 public class CRUKCIConfig
 {
     /**
@@ -73,21 +76,25 @@ public class CRUKCIConfig
     /**
      * Memory reserved for the JVM overhead.
      */
+    @ConfigOption
     public final MemoryUnit javaOverhead;
 
     /**
      * Memory reserved for the JVM metaspace overhead.
      */
+    @ConfigOption
     public final MemoryUnit javaMetaspace;
 
     /**
      * Maximum number of lines to scan (&le;0 is unlimited).
      */
+    @ConfigOption
     public final int maxLinesToScan;
 
     /**
      * List of compiled regex patterns to search for.
      */
+    @ConfigOption
     public final List<ScanPattern> patterns;
 
     /**
@@ -131,7 +138,7 @@ public class CRUKCIConfig
      *
      * @param session The Nextflow session.
      */
-    @SuppressWarnings({"unchecked","rawtypes"})
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public CRUKCIConfig(Session session)
     {
         Map<String, Object> configMap = Collections.emptyMap();
