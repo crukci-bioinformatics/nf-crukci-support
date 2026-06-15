@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import nextflow.Session;
 import nextflow.config.schema.ConfigOption;
+import nextflow.config.schema.ConfigScope;
 import nextflow.config.schema.ScopeName;
 import nextflow.util.MemoryUnit;
 
@@ -25,7 +26,7 @@ import nextflow.util.MemoryUnit;
  * @author Richard Bowers
  */
 @ScopeName("crukci")
-public class CRUKCIConfig
+public class CRUKCIConfig implements ConfigScope
 {
     /**
      * One megabyte, for legibility of setting up the other constants.
