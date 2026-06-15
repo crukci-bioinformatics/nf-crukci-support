@@ -11,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import nextflow.Session;
+import nextflow.config.schema.ConfigOption;
+import nextflow.config.schema.ScopeName;
 import nextflow.util.MemoryUnit;
 
 /**
@@ -22,6 +24,7 @@ import nextflow.util.MemoryUnit;
  *
  * @author Richard Bowers
  */
+@ScopeName("crukci")
 public class CRUKCIConfig
 {
     /**
@@ -73,22 +76,33 @@ public class CRUKCIConfig
     /**
      * Memory reserved for the JVM overhead.
      */
+    @ConfigOption
     public final MemoryUnit javaOverhead;
 
     /**
      * Memory reserved for the JVM metaspace overhead.
      */
+    @ConfigOption
     public final MemoryUnit javaMetaspace;
 
     /**
      * Maximum number of lines to scan (&le;0 is unlimited).
      */
+    @ConfigOption
     public final int maxLinesToScan;
 
     /**
      * List of compiled regex patterns to search for.
      */
+    @ConfigOption
     public final List<ScanPattern> patterns;
+
+    /**
+     * Whether to include the default patterns in the whole set or not.
+     * Default is true (include them).
+     */
+    @ConfigOption
+    public final boolean defaultPatterns;
 
     /**
      * Represents a pattern to scan for in log files.
@@ -131,7 +145,7 @@ public class CRUKCIConfig
      *
      * @param session The Nextflow session.
      */
-    @SuppressWarnings({"unchecked","rawtypes"})
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public CRUKCIConfig(Session session)
     {
         Map<String, Object> configMap = Collections.emptyMap();
@@ -165,6 +179,7 @@ public class CRUKCIConfig
         this.javaMetaspace = metaspace;
 
         this.maxLinesToScan = getIntValue(configMap, "maxLinesToScan", 10000);
+        this.defaultPatterns = getBooleanValue(configMap, "defaultPatterns", true);
 
         // Load patterns
         Object patternsObj = configMap.get("patterns");
@@ -209,17 +224,22 @@ public class CRUKCIConfig
             }
         }
 
-        // Add the default patterns to the configured list.
-        patterns.add(new ScanPattern(
-            Pattern.compile("Exceeded job memory limit"),
-            "Memory Limit Exceeded",
-            137
-        ));
-        patterns.add(new ScanPattern(
-            Pattern.compile(Pattern.quote(OutOfMemoryError.class.getName())),
-            "Java Heap Exhausted",
-            137
-        ));
+        // Add the default patterns to the configured list unless instructed
+        // not to by defaultPatterns.
+
+        if (this.defaultPatterns)
+        {
+            patterns.add(new ScanPattern(
+                Pattern.compile("Exceeded job memory limit"),
+                "Memory Limit Exceeded",
+                137
+            ));
+            patterns.add(new ScanPattern(
+                Pattern.compile(Pattern.quote(OutOfMemoryError.class.getName())),
+                "Java Heap Exhausted",
+                137
+            ));
+        }
 
         this.patterns = Collections.unmodifiableList(patterns);
         limitsWarned = true;
