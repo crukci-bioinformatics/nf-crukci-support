@@ -164,6 +164,27 @@ class CRUKCIConfigTest
     }
 
     /**
+     * Tests that default patterns are not included when defaultPatterns is false.
+     */
+    @Test
+    void testDefaultPatternsDisabled()
+    {
+        Map<String, Object> configMap = Map.of(
+            "defaultPatterns", false,
+            "patterns", List.of("ERROR", "WARNING")
+        );
+
+        setup(configMap);
+
+        CRUKCIConfig config = new CRUKCIConfig(session);
+
+        assertEquals(2, config.patterns.size());
+
+        assertEquals("ERROR", config.patterns.get(0).name);
+        assertEquals("WARNING", config.patterns.get(1).name);
+    }
+
+    /**
      * Tests automatic detection of memory limit patterns.
      */
     @Test

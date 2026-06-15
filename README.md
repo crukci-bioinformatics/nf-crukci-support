@@ -36,9 +36,9 @@ mvn clean package
 The resulting JAR can be installed manually:
 
 ```bash
-mkdir -p ~/.nextflow/plugins/nf-crukci-support-1.1.0
-cp target/nf-crukci-support-1.1.0.jar \
-    ~/.nextflow/plugins/nf-crukci-support-1.1.0/
+mkdir -p ~/.nextflow/plugins/nf-crukci-support-1.1.2
+cp target/nf-crukci-support-1.1.2.jar \
+    ~/.nextflow/plugins/nf-crukci-support-1.1.2/
 ```
 
 ### Enabling the Plugin
@@ -47,7 +47,7 @@ Add the plugin to your `nextflow.config`:
 
 ```groovy
 plugins {
-    id 'nf-crukci-support@1.1.0'
+    id 'nf-crukci-support@1.1.2'
 }
 ```
 
@@ -70,16 +70,15 @@ with a "task terminated by external system" error.
 
 ### Default patterns
 
-If no `patterns` are configured in `nextflow.config` the plugin always
-applies these two patterns:
+The plugin usually applies these two patterns by default:
 
 | Pattern | Name | Exit code |
 |---------|------|-----------|
 | `Exceeded job memory limit` | Memory Limit Exceeded | 137 |
 | `java.lang.OutOfMemoryError` | Java Heap Exhausted | 137 |
 
-These two patterns are also appended to the end of any user-supplied list, so
-they are always active.
+These two patterns are appended to the end of any user-supplied list.
+They can be excluded with the `defaultPatterns` configuration option.
 
 ### Configuration
 
@@ -90,6 +89,7 @@ All settings go inside a `crukci { }` block in `nextflow.config`.
 | `javaOverhead` | `64M` | `32M` | Memory reserved for JVM misc overhead (JNI, ByteBuffers, etc.) used by `javaMemoryOptions` |
 | `javaMetaspace` | `128M` | `64M` | Memory reserved for JVM metaspace used by `javaMemoryOptions` |
 | `maxLinesToScan` | `10000` | - | Maximum lines to read per log file. Set to `0` for unlimited. |
+| `defaultPatterns` | `true` | - | Whether to include the two built-in memory-limit patterns. Set to `false` to suppress them. |
 | `patterns` | (none) | - | List of patterns to scan for (see below) |
 
 #### Pattern specification
@@ -120,13 +120,14 @@ patterns = [
 
 ```groovy
 plugins {
-    id 'nf-crukci-support@1.1.0'
+    id 'nf-crukci-support@1.1.2'
 }
 
 crukci {
     javaOverhead    = '128M'   // Reserve 128 MB for JVM misc overhead
     javaMetaspace   = '256M'   // Reserve 256 MB for JVM metaspace
     maxLinesToScan  = 5000     // Only scan the first 5000 lines
+    defaultPatterns = false    // Don't include the default patterns.
 
     patterns = [
         // Plain string - exit code set automatically because text contains "memory limit"
@@ -308,7 +309,7 @@ try {
 
 ```groovy
 plugins {
-    id 'nf-crukci-support@1.1.0'
+    id 'nf-crukci-support@1.1.2'
 }
 
 // crukci { } block not required - default patterns cover the common cases
