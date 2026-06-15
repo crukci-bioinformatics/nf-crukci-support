@@ -7,7 +7,7 @@
 
     <groupId>org.cruk.nextflow</groupId>
     <artifactId>nf-crukci-support</artifactId>
-    <version>1.1.2</version>
+    <version>1.1.3</version>
     <packaging>jar</packaging>
 
     <name>nf-crukci-support</name>
@@ -432,7 +432,7 @@
             <dependency>
                 <groupId>io.nextflow</groupId>
                 <artifactId>nextflow</artifactId>
-                <version>25.04.4</version>
+                <version>25.10.0</version>
                 <exclusions>
                     <exclusion>
                         <groupId>ch.qos.logback</groupId>

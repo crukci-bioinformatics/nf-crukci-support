@@ -5,13 +5,14 @@ plugins {
 version = '1.1.2'
 
 nextflowPlugin {
-    nextflowVersion = '25.04.4'
+    nextflowVersion = '25.10.0'
 
     provider = 'Cancer Research UK Cambridge Institute'
     className = 'org.cruk.nextflow.plugin.crukci.logscan.LogScanPlugin'
     extensionPoints = [
         'org.cruk.nextflow.plugin.crukci.extension.CRUKCIExtension',
-        'org.cruk.nextflow.plugin.crukci.logscan.LogScanObserverFactory'
+        'org.cruk.nextflow.plugin.crukci.logscan.LogScanObserverFactory',
+        'org.cruk.nextflow.plugin.crukci.CRUKCIConfig'
     ]
 }
 
@@ -21,10 +22,10 @@ repositories {
 
 dependencies {
     implementation 'org.apache.commons:commons-lang3:3.19.0'
-    compileOnly 'io.nextflow:nextflow:25.04.4'
-    compileOnly 'io.nextflow:nf-commons:25.04.4'
-    testImplementation 'io.nextflow:nextflow:25.04.4'
-    testImplementation 'io.nextflow:nf-commons:25.04.4'
+    compileOnly 'io.nextflow:nextflow:25.10.0'
+    compileOnly 'io.nextflow:nf-commons:25.10.0'
+    testImplementation 'io.nextflow:nextflow:25.10.0'
+    testImplementation 'io.nextflow:nf-commons:25.10.0'
     testImplementation 'org.apache.groovy:groovy-all:4.0.29'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.14.1'
     testImplementation 'org.mockito:mockito-core:5.20.0'

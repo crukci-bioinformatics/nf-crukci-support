@@ -11,8 +11,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import nextflow.Session;
-import nextflow.config.schema.ConfigOption;
-import nextflow.config.schema.ScopeName;
+import nextflow.config.spec.ConfigOption;
+import nextflow.config.spec.ConfigScope;
+import nextflow.config.spec.ScopeName;
 import nextflow.util.MemoryUnit;
 
 /**
@@ -25,7 +26,7 @@ import nextflow.util.MemoryUnit;
  * @author Richard Bowers
  */
 @ScopeName("crukci")
-public class CRUKCIConfig
+public class CRUKCIConfig implements ConfigScope
 {
     /**
      * One megabyte, for legibility of setting up the other constants.
@@ -138,6 +139,19 @@ public class CRUKCIConfig
             this.name = name;
             this.exitCode = exitCode;
         }
+    }
+
+    /**
+     * No-arg constructor required by the pf4j extension point mechanism.
+     * This allows the ConfigValidator to discover this class as a ConfigScope.
+     */
+    public CRUKCIConfig()
+    {
+        this.javaOverhead = MemoryUnit.of(DEFAULT_JAVA_OVERHEAD);
+        this.javaMetaspace = MemoryUnit.of(DEFAULT_JAVA_METASPACE);
+        this.maxLinesToScan = DEFAULT_LINES_TO_SCAN;
+        this.defaultPatterns = true;
+        this.patterns = Collections.emptyList();
     }
 
     /**
