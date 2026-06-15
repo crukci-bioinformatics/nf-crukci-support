@@ -98,6 +98,13 @@ public class CRUKCIConfig
     public final List<ScanPattern> patterns;
 
     /**
+     * Whether to include the default patterns in the whole set or not.
+     * Default is true (include them).
+     */
+    @ConfigOption
+    public final boolean defaultPatterns;
+
+    /**
      * Represents a pattern to scan for in log files.
      */
     public static class ScanPattern
@@ -172,6 +179,7 @@ public class CRUKCIConfig
         this.javaMetaspace = metaspace;
 
         this.maxLinesToScan = getIntValue(configMap, "maxLinesToScan", 10000);
+        this.defaultPatterns = getBooleanValue(configMap, "defaultPatterns", true);
 
         // Load patterns
         Object patternsObj = configMap.get("patterns");
@@ -216,17 +224,22 @@ public class CRUKCIConfig
             }
         }
 
-        // Add the default patterns to the configured list.
-        patterns.add(new ScanPattern(
-            Pattern.compile("Exceeded job memory limit"),
-            "Memory Limit Exceeded",
-            137
-        ));
-        patterns.add(new ScanPattern(
-            Pattern.compile(Pattern.quote(OutOfMemoryError.class.getName())),
-            "Java Heap Exhausted",
-            137
-        ));
+        // Add the default patterns to the configured list unless instructed
+        // not to by defaultPatterns.
+
+        if (this.defaultPatterns)
+        {
+            patterns.add(new ScanPattern(
+                Pattern.compile("Exceeded job memory limit"),
+                "Memory Limit Exceeded",
+                137
+            ));
+            patterns.add(new ScanPattern(
+                Pattern.compile(Pattern.quote(OutOfMemoryError.class.getName())),
+                "Java Heap Exhausted",
+                137
+            ));
+        }
 
         this.patterns = Collections.unmodifiableList(patterns);
         limitsWarned = true;
