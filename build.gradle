@@ -29,6 +29,10 @@ tasks.named('compileTestGroovy') {
     dependsOn tasks.named('extensionPoints')
 }
 
+configurations {
+    mockitoAgent
+}
+
 dependencies {
     implementation 'org.apache.commons:commons-lang3:3.19.0'
     compileOnly 'io.nextflow:nextflow:25.10.0'
@@ -43,4 +47,10 @@ dependencies {
     // Nextflow's transitive groovy-test-junit5 dependency pins launcher to 1.13.3,
     // which is misaligned with the engine version and causes test discovery to fail.
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.14.1'
+    // Mockito agent configuration - prevents dynamic agent loading warnings in JDK 21+
+    mockitoAgent('org.mockito:mockito-core:5.20.0') { transitive = false }
+}
+
+tasks.named('test') {
+    jvmArgs "-javaagent:${configurations.mockitoAgent.asPath}"
 }
