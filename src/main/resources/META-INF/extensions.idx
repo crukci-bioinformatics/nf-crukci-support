@@ -1,0 +1,3 @@
+org.cruk.nextflow.plugin.crukci.CRUKCIConfig
+org.cruk.nextflow.plugin.crukci.extension.CRUKCIExtension
+org.cruk.nextflow.plugin.crukci.logscan.LogScanObserverFactory
