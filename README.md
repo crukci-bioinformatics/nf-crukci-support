@@ -380,6 +380,10 @@ process createReport {
 
 ## Building and Testing
 
+The project supports both Maven and Gradle builds.
+
+### Maven
+
 ```bash
 # Build
 mvn clean package
@@ -387,6 +391,29 @@ mvn clean package
 # Run tests
 mvn test
 ```
+
+### Gradle
+
+```bash
+# Build
+./gradlew assemble
+
+# Run tests
+./gradlew test
+```
+
+> **Note:** Two fixes in `build.gradle` are required for Gradle tests to work correctly
+> with Gradle 8 and Nextflow 25.x:
+>
+> 1. `compileTestJava` and `compileTestGroovy` must explicitly depend on the
+>    `extensionPoints` task, because Gradle 8's strict task-ordering validation
+>    rejects the implicit dependency that earlier versions allowed.
+>
+> 2. `org.junit.platform:junit-platform-launcher` must be pinned to `1.14.1`
+>    (matching `junit-platform-engine`) via a `testRuntimeOnly` dependency.
+>    Nextflow's transitive `groovy-test-junit5` dependency resolves the launcher
+>    to `1.13.3`, which is misaligned with the engine version and causes JUnit
+>    test discovery to fail at runtime.
 
 ## License
 
